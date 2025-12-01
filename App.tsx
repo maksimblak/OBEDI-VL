@@ -64,15 +64,24 @@ export default function App() {
     setIsCartOpen(true);
   };
 
-  const addMultipleToCart = (items: MenuItem[]) => {
-    items.forEach(item => {
-      setCart(prev => {
-        const existing = prev.find(i => i.id === item.id);
-        if (existing) {
-          return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+  const addMultipleToCart = (newItems: MenuItem[]) => {
+    setCart(prev => {
+      const updatedCart = [...prev];
+      
+      newItems.forEach(newItem => {
+        const existingIndex = updatedCart.findIndex(item => item.id === newItem.id);
+        
+        if (existingIndex > -1) {
+          updatedCart[existingIndex] = {
+            ...updatedCart[existingIndex],
+            quantity: updatedCart[existingIndex].quantity + 1
+          };
+        } else {
+          updatedCart.push({ ...newItem, quantity: 1 });
         }
-        return [...prev, { ...item, quantity: 1 }];
       });
+      
+      return updatedCart;
     });
     setIsCartOpen(true);
   };

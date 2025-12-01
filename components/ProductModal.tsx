@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, ShoppingBag, Flame, Zap, Droplet, Wheat } from 'lucide-react';
 import { MenuItem } from '../types';
@@ -65,22 +66,22 @@ export const ProductModal: React.FC<ProductModalProps> = ({ item, onClose, onAdd
             <div className="grid grid-cols-4 gap-2 mb-8">
               <div className="bg-white/5 p-3 rounded-2xl text-center border border-white/5">
                 <Flame size={18} className="mx-auto text-orange-400 mb-1" />
-                <div className="text-white font-bold text-sm">{item.calories}</div>
+                <div className="text-white font-bold text-sm">{item.calories || 0}</div>
                 <div className="text-[10px] text-slate-500 uppercase">ккал</div>
               </div>
               <div className="bg-white/5 p-3 rounded-2xl text-center border border-white/5">
                 <Zap size={18} className="mx-auto text-yellow-400 mb-1" />
-                <div className="text-white font-bold text-sm">{item.protein}</div>
+                <div className="text-white font-bold text-sm">{item.protein || 0}</div>
                 <div className="text-[10px] text-slate-500 uppercase">белки</div>
               </div>
               <div className="bg-white/5 p-3 rounded-2xl text-center border border-white/5">
                 <Droplet size={18} className="mx-auto text-blue-400 mb-1" />
-                <div className="text-white font-bold text-sm">{item.fats}</div>
+                <div className="text-white font-bold text-sm">{item.fats || 0}</div>
                 <div className="text-[10px] text-slate-500 uppercase">жиры</div>
               </div>
               <div className="bg-white/5 p-3 rounded-2xl text-center border border-white/5">
                 <Wheat size={18} className="mx-auto text-amber-200 mb-1" />
-                <div className="text-white font-bold text-sm">{item.carbs}</div>
+                <div className="text-white font-bold text-sm">{item.carbs || 0}</div>
                 <div className="text-[10px] text-slate-500 uppercase">углев</div>
               </div>
             </div>
