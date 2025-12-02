@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Phone, ArrowRight, Clock, Utensils, Truck, Star, ChevronDown, ChevronUp, MapPin, PlayCircle, Settings2, RotateCcw, History, User as UserIcon, LogIn, Menu as MenuIcon, X, Zap, ChefHat } from 'lucide-react';
+import { ShoppingBag, Menu as MenuIcon, X, Zap, Settings2, RotateCcw, LogIn, Utensils, Star, Clock, Truck, ChevronDown, ChevronUp, MapPin, Phone } from 'lucide-react';
 import { MenuSection } from './components/MenuSection';
 import { CartSidebar } from './components/CartSidebar';
 import { AIChef } from './components/AIChef';
@@ -55,9 +55,11 @@ export default function App() {
 
   const addToCart = (item: MenuItem) => {
     setCart(prev => {
-      const existing = prev.find(i => i.id === item.id);
-      if (existing) {
-        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+      const existingIndex = prev.findIndex(i => i.id === item.id);
+      if (existingIndex > -1) {
+        const updated = [...prev];
+        updated[existingIndex] = { ...updated[existingIndex], quantity: updated[existingIndex].quantity + 1 };
+        return updated;
       }
       return [...prev, { ...item, quantity: 1 }];
     });
@@ -157,7 +159,7 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen bg-slate-950 overflow-hidden">
+    <div className="relative min-h-screen bg-slate-950 overflow-hidden font-sans">
       
       {/* Navbar */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'glass border-b border-white/10 py-3 shadow-lg shadow-indigo-500/5' : 'bg-transparent py-4 md:py-6'}`}>
