@@ -431,7 +431,7 @@ export default function App() {
                     </ul>
                     <button 
                        onClick={() => addMultipleToCart(createSet(['5', '6', '17']))}
-                       className="w-full py-3 rounded-xl bg-fuchsia-600 text-white font-bold hover:bg-fuchsia-500 transition-all shadow-lg shadow-fuchsia-600/20"
+                       className="w-full py-3 rounded-xl btn-shine animate-shine bg-[length:200%_auto] text-white font-bold transition-all shadow-lg shadow-indigo-500/20 hover:scale-[1.02] active:scale-[0.98]"
                     >
                       В корзину
                     </button>
