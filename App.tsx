@@ -1,6 +1,5 @@
-
-import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Menu as MenuIcon, X, Zap, Settings2, RotateCcw, LogIn, Utensils, Star, Clock, Truck, ChevronDown, ChevronUp, MapPin, Phone } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ShoppingBag, Menu as MenuIcon, X, Zap, Settings2, RotateCcw, LogIn, Utensils, Star, Clock, Truck, ChevronDown, ChevronUp, MapPin, Phone, Loader2, Check } from 'lucide-react';
 import { MenuSection } from './components/MenuSection';
 import { CartSidebar } from './components/CartSidebar';
 import { AIChef } from './components/AIChef';
@@ -14,11 +13,16 @@ import { Logo } from './components/Logo';
 import { MenuItem, CartItem, Category, Order, User } from './types';
 import { historyService } from './services/historyService';
 import { authService } from './services/authService';
+import { evotorService } from './services/evotorService';
 import { MOCK_MENU, IMAGES, REVIEWS, FAQ } from './data';
 
 export default function App() {
   const [activeCategory, setActiveCategory] = useState<Category>('lunch');
   const [cart, setCart] = useState<CartItem[]>([]);
+  
+  // Data State
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(MOCK_MENU);
+  const [isMenuLoading, setIsMenuLoading] = useState(false);
   
   // Modals state
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -44,16 +48,30 @@ export default function App() {
     const currentUser = authService.getCurrentUser();
     setUser(currentUser);
 
-    // Check history (if user logs in, we might want to reload this, but for now simple check)
+    // Check history
     const last = historyService.getLastOrder(currentUser?.id);
     if (last) setLastOrder(last);
 
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
+
+    // Try to fetch from Evotor
+    const fetchMenu = async () => {
+       setIsMenuLoading(true);
+       const evotorItems = await evotorService.getProducts();
+       if (evotorItems.length > 0) {
+         setMenuItems(evotorItems);
+       }
+       // If evotor returns empty (no keys configured), we stick with MOCK_MENU
+       setIsMenuLoading(false);
+    };
+    
+    fetchMenu();
+
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const addToCart = (item: MenuItem) => {
+  const addToCart = useCallback((item: MenuItem) => {
     setCart(prev => {
       const existingIndex = prev.findIndex(i => i.id === item.id);
       if (existingIndex > -1) {
@@ -64,9 +82,9 @@ export default function App() {
       return [...prev, { ...item, quantity: 1 }];
     });
     setIsCartOpen(true);
-  };
+  }, []);
 
-  const addMultipleToCart = (newItems: MenuItem[]) => {
+  const addMultipleToCart = useCallback((newItems: MenuItem[]) => {
     setCart(prev => {
       const updatedCart = [...prev];
       
@@ -86,7 +104,7 @@ export default function App() {
       return updatedCart;
     });
     setIsCartOpen(true);
-  };
+  }, []);
 
   const updateQuantity = (id: string, delta: number) => {
     setCart(prev => prev.map(item => {
@@ -145,7 +163,7 @@ export default function App() {
   };
 
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const upsellItems = MOCK_MENU.filter(i => i.category === 'extras');
+  const upsellItems = menuItems.filter(i => i.category === 'extras');
 
   const scrollToSection = (id: string) => {
     setIsMobileMenuOpen(false); // Close mobile menu if open
@@ -181,16 +199,16 @@ export default function App() {
 
           <div className="flex items-center gap-4 md:gap-8">
             <nav className="hidden md:flex gap-8 text-sm font-medium text-slate-200">
-              <button onClick={() => scrollToSection('how-it-works')} className="hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-all relative group">
-                Как это работает
+              <button onClick={() => scrollToSection('featured-sets')} className="hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-all relative group">
+                Комплексы
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-cyan-400 to-fuchsia-400 transition-all group-hover:w-full box-shadow-[0_0_8px_currentColor]"></span>
               </button>
               <button onClick={() => scrollToSection('menu-start')} className="hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-all relative group">
                 Меню
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-cyan-400 to-fuchsia-400 transition-all group-hover:w-full"></span>
               </button>
-              <button onClick={() => scrollToSection('reviews')} className="hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-all relative group">
-                Отзывы
+              <button onClick={() => scrollToSection('delivery-info')} className="hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-all relative group">
+                Доставка
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-cyan-400 to-fuchsia-400 transition-all group-hover:w-full"></span>
               </button>
             </nav>
@@ -249,10 +267,9 @@ export default function App() {
                    <LogIn size={18} /> Войти в аккаунт
                 </button>
              )}
+             <button onClick={() => scrollToSection('featured-sets')} className="text-slate-300 hover:text-white p-2 text-left font-medium">Готовые комплексы</button>
              <button onClick={() => scrollToSection('menu-start')} className="text-slate-300 hover:text-white p-2 text-left font-medium">Меню доставки</button>
-             <button onClick={() => scrollToSection('how-it-works')} className="text-slate-300 hover:text-white p-2 text-left font-medium">Как это работает</button>
-             <button onClick={() => scrollToSection('reviews')} className="text-slate-300 hover:text-white p-2 text-left font-medium">Отзывы</button>
-             <button onClick={() => scrollToSection('faq')} className="text-slate-300 hover:text-white p-2 text-left font-medium">Вопросы и ответы</button>
+             <button onClick={() => scrollToSection('delivery-info')} className="text-slate-300 hover:text-white p-2 text-left font-medium">Условия доставки</button>
           </div>
         </div>
       </nav>
@@ -281,7 +298,7 @@ export default function App() {
         </div>
       )}
 
-      {/* HERO SECTION - REIMAGINED */}
+      {/* HERO SECTION - UPDATED */}
       <header className="relative w-full min-h-[95vh] flex items-center justify-center overflow-hidden pb-10">
         
         {/* Background Image Layer */}
@@ -293,32 +310,36 @@ export default function App() {
               style={{ animationDuration: '20s' }}
             />
             {/* Dark Gradient Overlay with Vignette */}
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-900/40 to-slate-950"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-900/50 to-slate-950"></div>
             <div className="absolute inset-0 bg-radial-gradient from-transparent to-slate-950 opacity-90"></div>
         </div>
 
         {/* Content Layer */}
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 text-center pt-32 md:pt-48 flex flex-col items-center">
           
-          {/* Glowing Backlight behind Text */}
+          {/* Glowing Backlight */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-indigo-600/30 blur-[120px] rounded-full pointer-events-none mix-blend-screen"></div>
 
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-white/5 border border-white/10 text-indigo-200 text-xs font-bold uppercase tracking-[0.2em] mb-8 backdrop-blur-xl shadow-[0_0_30px_rgba(99,102,241,0.2)] animate-fade-in hover:bg-white/10 transition-colors cursor-default">
+          <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-100 text-xs font-bold uppercase tracking-[0.2em] mb-8 backdrop-blur-xl shadow-[0_0_30px_rgba(99,102,241,0.2)] animate-fade-in hover:bg-indigo-500/30 transition-colors cursor-default">
             <Zap size={14} className="text-yellow-400 fill-yellow-400 animate-bounce" />
-            Вкусные обеды №1
+            Владивосток
           </div>
           
-          {/* Main Typography - Restored Clean Style */}
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-12 leading-tight drop-shadow-2xl animate-fade-in">
-             Комплексные обеды <br />
-             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-fuchsia-400 relative">
-               премиум-класса
+          {/* Main Typography - Strong USP */}
+          <h1 className="text-4xl md:text-7xl font-bold text-white mb-8 leading-tight drop-shadow-2xl animate-fade-in max-w-5xl">
+             Вкусные обеды в офис <br />
+             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-fuchsia-400 to-indigo-400 animate-shine bg-[length:200%_auto]">
+               с доставкой за 45 минут
              </span>
           </h1>
           
+          <p className="text-lg md:text-xl text-slate-300 max-w-2xl mb-12 animate-fade-in leading-relaxed" style={{ animationDelay: '0.2s' }}>
+             Готовим "из-под ножа" сразу после заказа. Бесплатная доставка от 3000₽. Меню обновляется каждый день.
+          </p>
+          
           {/* Buttons */}
-          <div className="flex flex-col sm:flex-row gap-5 justify-center mt-20 mb-16 w-full max-w-md sm:max-w-none animate-fade-in" style={{ animationDelay: '0.5s' }}>
+          <div className="flex flex-col sm:flex-row gap-5 justify-center mb-16 w-full max-w-md sm:max-w-none animate-fade-in" style={{ animationDelay: '0.4s' }}>
             <button 
               onClick={() => setIsConstructorOpen(true)}
               className="relative overflow-hidden bg-white text-indigo-950 px-10 py-5 rounded-2xl font-black text-lg transition-all hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.3)] flex items-center justify-center gap-3 group z-10"
@@ -332,70 +353,120 @@ export default function App() {
               className="px-10 py-5 glass border border-white/20 text-white rounded-2xl font-bold hover:bg-white/10 hover:border-white/40 transition-all active:scale-95 flex items-center justify-center gap-3 group text-lg"
             >
               <Utensils size={22} className="text-fuchsia-400 group-hover:rotate-12 transition-transform" />
-              Меню
+              Выбрать из меню
             </button>
           </div>
           
-          {/* Stats Grid - Floating Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8 w-full max-w-4xl animate-fade-in" style={{ animationDelay: '0.7s' }}>
-             <div className="glass p-4 rounded-2xl flex flex-col items-center justify-center border-t border-indigo-500/30 hover:-translate-y-1 transition-transform">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8 w-full max-w-4xl animate-fade-in" style={{ animationDelay: '0.6s' }}>
+             <div className="glass p-4 rounded-2xl flex flex-col items-center justify-center border-t border-indigo-500/30 hover:-translate-y-1 transition-transform bg-indigo-900/10">
                 <div className="text-3xl font-black text-white mb-1 drop-shadow-lg">45<span className="text-indigo-400 text-lg align-top">+</span></div>
-                <div className="text-xs text-indigo-200 uppercase tracking-widest font-bold">мин. доставка</div>
+                <div className="text-xs text-indigo-200 uppercase tracking-widest font-bold">минут доставка</div>
              </div>
-             <div className="glass p-4 rounded-2xl flex flex-col items-center justify-center border-t border-fuchsia-500/30 hover:-translate-y-1 transition-transform">
-                <div className="text-3xl font-black text-white mb-1 drop-shadow-lg">500<span className="text-fuchsia-400 text-lg align-top">+</span></div>
-                <div className="text-xs text-fuchsia-200 uppercase tracking-widest font-bold">обедов/день</div>
+             <div className="glass p-4 rounded-2xl flex flex-col items-center justify-center border-t border-fuchsia-500/30 hover:-translate-y-1 transition-transform bg-fuchsia-900/10">
+                <div className="text-3xl font-black text-white mb-1 drop-shadow-lg">350<span className="text-fuchsia-400 text-lg align-top">₽</span></div>
+                <div className="text-xs text-fuchsia-200 uppercase tracking-widest font-bold">мин. цена обеда</div>
              </div>
-             <div className="glass p-4 rounded-2xl flex flex-col items-center justify-center border-t border-cyan-500/30 hover:-translate-y-1 transition-transform">
+             <div className="glass p-4 rounded-2xl flex flex-col items-center justify-center border-t border-cyan-500/30 hover:-translate-y-1 transition-transform bg-cyan-900/10">
                 <div className="text-3xl font-black text-white mb-1 drop-shadow-lg flex items-center gap-1">4.9 <Star size={20} className="fill-yellow-400 text-yellow-400" /></div>
-                <div className="text-xs text-cyan-200 uppercase tracking-widest font-bold">народный рейтинг</div>
+                <div className="text-xs text-cyan-200 uppercase tracking-widest font-bold">рейтинг качества</div>
              </div>
           </div>
-
         </div>
-
       </header>
 
-      {/* Process Section */}
-      <section id="how-it-works" className="py-16 md:py-24 relative z-10 bg-slate-950">
-         {/* Ambient background blob for transition */}
-         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[400px] bg-indigo-900/20 blur-[100px] pointer-events-none"></div>
+      {/* FEATURED COMPLEXES SECTION (New) */}
+      <section id="featured-sets" className="py-24 relative z-10 bg-slate-950">
+         <div className="max-w-7xl mx-auto px-4 md:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">Готовые решения</h2>
+              <p className="text-slate-400 text-lg">Сбалансированные комплексы для продуктивного дня.</p>
+            </div>
 
-        <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 drop-shadow-lg">Сервис нового поколения</h2>
-            <p className="text-slate-300 text-lg">Закажите вкусный обед в пару кликов.</p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-             <div className="glass p-8 rounded-3xl group hover:bg-white/5 hover:border-indigo-500/50 transition-all duration-500 shadow-lg hover:shadow-indigo-500/10">
-               <div className="w-14 h-14 bg-gradient-to-br from-indigo-500/30 to-purple-500/30 text-indigo-300 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)] group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]">
-                 <Utensils size={28} />
+            <div className="grid md:grid-cols-3 gap-8">
+               {/* Set 1: Light */}
+               <div className="group relative rounded-3xl overflow-hidden border border-white/10 bg-slate-900 hover:border-indigo-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-500/20">
+                  <div className="h-48 overflow-hidden relative">
+                    <img src={IMAGES.lunch2} alt="Лайт Обед" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <div className="absolute top-4 right-4 bg-indigo-500 text-white font-bold px-3 py-1 rounded-full text-sm shadow-lg">350 ₽</div>
+                  </div>
+                  <div className="p-8">
+                    <h3 className="text-2xl font-bold text-white mb-2">Лайт</h3>
+                    <p className="text-slate-400 text-sm mb-6">Идеально для тех, кто следит за фигурой, но не хочет голодать.</p>
+                    <ul className="space-y-3 mb-8">
+                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Легкий овощной салат</li>
+                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Суп дня (250мл)</li>
+                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Хлебная корзина</li>
+                    </ul>
+                    <button 
+                      onClick={() => addToCart({
+                         id: 'set-light', title: 'Обед "Лайт"', price: 350, description: 'Легкий салат, суп дня и хлеб.', category: 'lunch', image: IMAGES.lunch2, weight: '550г', calories: 450
+                      } as MenuItem)}
+                      className="w-full py-3 rounded-xl border border-indigo-500/30 text-indigo-300 font-bold hover:bg-indigo-500 hover:text-white transition-all"
+                    >
+                      В корзину
+                    </button>
+                  </div>
                </div>
-               <h3 className="text-xl font-semibold text-white mb-3 group-hover:text-indigo-300 transition-colors">Умное меню</h3>
-               <p className="text-slate-400 leading-relaxed group-hover:text-slate-300">AI помогает выбрать идеальный обед на основе ваших предпочтений за пару секунд.</p>
-             </div>
 
-             <div className="glass p-8 rounded-3xl group hover:bg-white/5 hover:border-fuchsia-500/50 transition-all duration-500 shadow-lg hover:shadow-fuchsia-500/10">
-               <div className="w-14 h-14 bg-gradient-to-br from-fuchsia-500/30 to-pink-500/30 text-fuchsia-300 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 border border-fuchsia-500/30 shadow-[0_0_15px_rgba(217,70,239,0.1)] group-hover:shadow-[0_0_20px_rgba(217,70,239,0.3)]">
-                 <Clock size={28} />
+               {/* Set 2: Standard (Featured) */}
+               <div className="group relative rounded-3xl overflow-hidden border border-fuchsia-500/30 bg-slate-800 transform scale-105 shadow-xl hover:border-fuchsia-500 hover:shadow-fuchsia-500/20 transition-all duration-300 z-10">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-fuchsia-500"></div>
+                  <div className="h-52 overflow-hidden relative">
+                    <img src={IMAGES.lunch6} alt="Стандарт Обед" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <div className="absolute top-4 right-4 bg-fuchsia-500 text-white font-bold px-3 py-1 rounded-full text-sm shadow-lg">450 ₽</div>
+                    <div className="absolute top-4 left-4 bg-white/20 backdrop-blur-md text-white font-bold px-3 py-1 rounded-full text-xs border border-white/20">Хит продаж</div>
+                  </div>
+                  <div className="p-8">
+                    <h3 className="text-2xl font-bold text-white mb-2">Стандарт</h3>
+                    <p className="text-slate-300 text-sm mb-6">Классический сытный обед. Выбор большинства наших клиентов.</p>
+                    <ul className="space-y-3 mb-8">
+                       <li className="flex items-center gap-3 text-slate-200 text-sm"><Check size={16} className="text-fuchsia-400" /> Салат "Витаминный"</li>
+                       <li className="flex items-center gap-3 text-slate-200 text-sm"><Check size={16} className="text-fuchsia-400" /> Горячее (котлета/гуляш)</li>
+                       <li className="flex items-center gap-3 text-slate-200 text-sm"><Check size={16} className="text-fuchsia-400" /> Гарнир на выбор</li>
+                       <li className="flex items-center gap-3 text-slate-200 text-sm"><Check size={16} className="text-fuchsia-400" /> Напиток (морс/чай)</li>
+                    </ul>
+                    <button 
+                      onClick={() => addToCart({
+                         id: 'set-standard', title: 'Обед "Стандарт"', price: 450, description: 'Салат, горячее с гарниром и напиток.', category: 'lunch', image: IMAGES.lunch6, weight: '750г', calories: 750
+                      } as MenuItem)}
+                      className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white font-bold hover:shadow-lg hover:scale-[1.02] transition-all shadow-indigo-500/20"
+                    >
+                      В корзину
+                    </button>
+                  </div>
                </div>
-               <h3 className="text-xl font-semibold text-white mb-3 group-hover:text-fuchsia-300 transition-colors">Готовим сейчас</h3>
-               <p className="text-slate-400 leading-relaxed group-hover:text-slate-300">Никаких заготовок. Шеф-повар начинает готовить сразу после клика "Заказать".</p>
-             </div>
 
-             <div className="glass p-8 rounded-3xl group hover:bg-white/5 hover:border-cyan-500/50 transition-all duration-500 shadow-lg hover:shadow-cyan-500/10">
-               <div className="w-14 h-14 bg-gradient-to-br from-cyan-500/30 to-blue-500/30 text-cyan-300 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.1)] group-hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]">
-                 <Truck size={28} />
+               {/* Set 3: Maxi */}
+               <div className="group relative rounded-3xl overflow-hidden border border-white/10 bg-slate-900 hover:border-indigo-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-500/20">
+                  <div className="h-48 overflow-hidden relative">
+                    <img src={IMAGES.lunch3} alt="Макси Обед" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <div className="absolute top-4 right-4 bg-indigo-500 text-white font-bold px-3 py-1 rounded-full text-sm shadow-lg">590 ₽</div>
+                  </div>
+                  <div className="p-8">
+                    <h3 className="text-2xl font-bold text-white mb-2">Макси</h3>
+                    <p className="text-slate-400 text-sm mb-6">Полный набор для максимальной энергии. Первое, второе и десерт.</p>
+                    <ul className="space-y-3 mb-8">
+                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Полный салат</li>
+                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Суп дня (350мл)</li>
+                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Горячее с гарниром</li>
+                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Десерт или выпечка</li>
+                    </ul>
+                    <button 
+                      onClick={() => addToCart({
+                         id: 'set-maxi', title: 'Обед "Макси"', price: 590, description: 'Салат, суп, горячее, гарнир, десерт и напиток.', category: 'lunch', image: IMAGES.lunch3, weight: '950г', calories: 1100
+                      } as MenuItem)}
+                      className="w-full py-3 rounded-xl border border-indigo-500/30 text-indigo-300 font-bold hover:bg-indigo-500 hover:text-white transition-all"
+                    >
+                      В корзину
+                    </button>
+                  </div>
                </div>
-               <h3 className="text-xl font-semibold text-white mb-3 group-hover:text-cyan-300 transition-colors">Турбо-доставка</h3>
-               <p className="text-slate-400 leading-relaxed group-hover:text-slate-300">Оптимизированные маршруты позволяют доставлять обеды горячими прямо к вашему столу.</p>
-             </div>
-          </div>
-        </div>
+            </div>
+         </div>
       </section>
 
-      {/* Infinite Marquee - Moved Here */}
+      {/* Infinite Marquee */}
       <div className="relative w-full overflow-hidden bg-indigo-950/30 border-y border-white/10 py-4 z-10 backdrop-blur-sm">
         <div className="flex animate-marquee whitespace-nowrap">
           {[1,2,3,4].map((i) => (
@@ -414,13 +485,25 @@ export default function App() {
       </div>
 
       {/* Menu Area */}
-      <MenuSection 
-        items={MOCK_MENU} 
-        activeCategory={activeCategory} 
-        onCategoryChange={setActiveCategory}
-        onAddToCart={addToCart}
-        onOpenModal={setModalItem}
-      />
+      {isMenuLoading ? (
+        <div id="menu-start" className="py-24 flex flex-col items-center justify-center text-white relative z-10">
+          <Loader2 size={48} className="animate-spin text-indigo-500 mb-4" />
+          <p className="text-slate-400">Загружаем меню из ресторана...</p>
+        </div>
+      ) : (
+        <MenuSection 
+          items={menuItems} 
+          activeCategory={activeCategory} 
+          onCategoryChange={setActiveCategory}
+          onAddToCart={addToCart}
+          onOpenModal={setModalItem}
+        />
+      )}
+
+      {/* Delivery Info Section */}
+      <div id="delivery-info">
+        <DeliveryInfo />
+      </div>
 
       {/* Reviews Section */}
       <section id="reviews" className="py-24 relative z-10 border-t border-white/10 bg-surface/30 backdrop-blur-sm">
@@ -460,9 +543,6 @@ export default function App() {
           </div>
         </div>
       </section>
-
-      {/* Delivery Info Section */}
-      <DeliveryInfo />
 
       {/* FAQ Section */}
       <section id="faq" className="py-24 max-w-3xl mx-auto px-4 relative z-10">
@@ -524,7 +604,7 @@ export default function App() {
                <ul className="space-y-4 text-slate-400 text-sm">
                  <li className="flex items-start gap-3">
                    <MapPin size={18} className="text-indigo-400 mt-0.5 drop-shadow-sm" />
-                   <span>г. Владивосток,<br/>ул. Светланская 10, оф. 3</span>
+                   <span>Адрес: ул. Надибаидзе, 28, Владивосток</span>
                  </li>
                  <li className="flex items-center gap-3">
                    <Phone size={18} className="text-indigo-400 drop-shadow-sm" />
@@ -569,7 +649,7 @@ export default function App() {
         <LunchConstructor 
           onClose={() => setIsConstructorOpen(false)}
           onAddToCart={addMultipleToCart}
-          allItems={MOCK_MENU}
+          allItems={menuItems}
         />
       )}
 

@@ -52,7 +52,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ item, onClose, onAdd
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
                <span className="px-2 py-1 rounded text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/20">
-                 {item.weight}
+                 {item.weight || 'Н/Д'}
                </span>
                <span className="px-2 py-1 rounded text-xs font-semibold bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/20">
                  Хит продаж

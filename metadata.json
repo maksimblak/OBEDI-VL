@@ -1,5 +1,7 @@
 {
   "name": "Obedi VL Premium",
   "description": "Доставка вкусных комплексных обедов в офис и на дом во Владивостоке. Меню обновляется каждый день.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }

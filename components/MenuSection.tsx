@@ -19,10 +19,33 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
   onOpenModal
 }) => {
   const [isSticky, setIsSticky] = useState(false);
-  // Default to today or Monday if Sunday(0)
+  
+  // Default to today. 0 is Sunday, 6 is Saturday.
   const currentDay = new Date().getDay();
-  const displayDay = currentDay === 0 || currentDay === 6 ? 1 : currentDay; 
-  const [selectedDay, setSelectedDay] = useState<number>(displayDay);
+  const [selectedDay, setSelectedDay] = useState<number>(currentDay);
+
+  // Refs for sliding animation
+  const tabsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0, opacity: 0 });
+
+  const tabs: { id: Category; label: string }[] = [
+    { id: 'lunch', label: 'Бизнес-ланчи' },
+    { id: 'extras', label: 'Напитки и десерты' },
+  ];
+
+  // Calculate sliding indicator position
+  useEffect(() => {
+    const activeIndex = tabs.findIndex(t => t.id === activeCategory);
+    const activeTab = tabsRef.current[activeIndex];
+    
+    if (activeTab) {
+      setIndicatorStyle({
+        left: activeTab.offsetLeft,
+        width: activeTab.offsetWidth,
+        opacity: 1
+      });
+    }
+  }, [activeCategory, isSticky]); // Re-calc on category change or sticky state change
 
   // Optimize filtering with useMemo
   const filteredItems = useMemo(() => {
@@ -39,18 +62,14 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
     });
   }, [items, activeCategory, selectedDay]);
 
-  const tabs: { id: Category; label: string }[] = [
-    { id: 'lunch', label: 'Бизнес-ланчи' },
-    { id: 'pies', label: 'Пироги' },
-    { id: 'catering', label: 'Кейтеринг' },
-  ];
-
   const days = [
     { id: 1, label: 'Пн' },
     { id: 2, label: 'Вт' },
     { id: 3, label: 'Ср' },
     { id: 4, label: 'Чт' },
     { id: 5, label: 'Пт' },
+    { id: 6, label: 'Сб' },
+    { id: 0, label: 'Вс' },
   ];
 
   useEffect(() => {
@@ -58,7 +77,6 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
       const section = document.getElementById('menu-start');
       if (section) {
         const rect = section.getBoundingClientRect();
-        // Slightly adjustable threshold
         setIsSticky(rect.top <= 90);
       }
     };
@@ -70,55 +88,69 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
     <div id="menu-start" className="relative min-h-screen pb-24 z-10">
       
       {/* Sticky Category Nav */}
-      <div className={`sticky top-[64px] md:top-[76px] z-30 py-4 transition-all duration-300 ${isSticky ? 'bg-slate-900/90 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-indigo-500/5' : 'bg-transparent'}`}>
-        <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-4">
+      <div className={`sticky top-[64px] md:top-[76px] z-30 py-4 transition-all duration-500 ${isSticky ? 'bg-slate-950/80 backdrop-blur-xl border-b border-white/5 shadow-2xl' : 'bg-transparent'}`}>
+        <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-6">
           
-          {/* Main Categories */}
-          <div className="overflow-x-auto no-scrollbar w-full flex justify-center">
-            <div className="flex gap-1.5 p-1.5 bg-slate-800/80 backdrop-blur-md rounded-full border border-white/10 shadow-inner">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    onCategoryChange(tab.id);
-                    if (isSticky) {
-                      window.scrollTo({
-                        top: (document.getElementById('menu-start')?.offsetTop || 0) - 100,
-                        behavior: 'smooth'
-                      });
-                    }
-                  }}
-                  className={`relative px-4 sm:px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap overflow-hidden ${
-                    activeCategory === tab.id
-                      ? 'text-white shadow-lg shadow-indigo-500/30'
-                      : 'text-slate-400 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  {activeCategory === tab.id && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-fuchsia-600 -z-10 animate-shine bg-[length:200%_auto]"></div>
-                  )}
-                  {tab.label}
-                </button>
-              ))}
+          {/* Main Categories - Sliding Tabs */}
+          <div className="relative p-1.5 bg-slate-900/50 backdrop-blur-md rounded-full border border-white/10 shadow-inner flex overflow-hidden">
+            
+            {/* The Sliding Background "Pill" */}
+            <div 
+              className="absolute top-1.5 bottom-1.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 rounded-full shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]"
+              style={{ 
+                left: indicatorStyle.left, 
+                width: indicatorStyle.width,
+                opacity: indicatorStyle.opacity 
+              }}
+            >
+              {/* Shine effect on the slider */}
+              <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/20 rounded-full"></div>
             </div>
+
+            {tabs.map((tab, index) => (
+              <button
+                key={tab.id}
+                ref={(el) => { tabsRef.current[index] = el; }}
+                onClick={() => {
+                  onCategoryChange(tab.id);
+                  if (isSticky) {
+                    window.scrollTo({
+                      top: (document.getElementById('menu-start')?.offsetTop || 0) - 100,
+                      behavior: 'smooth'
+                    });
+                  }
+                }}
+                className={`relative z-10 px-6 sm:px-10 py-2.5 rounded-full text-sm font-medium transition-colors duration-300 whitespace-nowrap ${
+                  activeCategory === tab.id
+                    ? 'text-white drop-shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
           {/* Week Day Selector (Only for Lunch) */}
           {activeCategory === 'lunch' && (
-            <div className="animate-fade-in flex items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 no-scrollbar">
-               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2 hidden sm:block">Меню на:</span>
-               <div className="flex gap-2 p-1 bg-slate-800/60 rounded-xl border border-white/10">
+            <div className="animate-fade-in w-full max-w-2xl overflow-x-auto no-scrollbar pb-2">
+               <div className="flex justify-center items-center gap-2 sm:gap-3 min-w-max px-2">
+                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mr-2 sticky left-0">День:</span>
                  {days.map((day) => (
                    <button
                      key={day.id}
                      onClick={() => setSelectedDay(day.id)}
-                     className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
+                     className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl text-sm font-bold transition-all duration-300 flex items-center justify-center border ${
                        selectedDay === day.id 
-                         ? 'bg-white text-indigo-900 shadow-lg scale-105' 
-                         : 'text-slate-400 hover:bg-white/10 hover:text-white'
+                         ? 'bg-white text-indigo-950 border-white shadow-[0_0_20px_rgba(255,255,255,0.4)] scale-110 -translate-y-1' 
+                         : 'bg-white/5 text-slate-400 border-white/5 hover:border-white/20 hover:bg-white/10 hover:text-white'
                      }`}
                    >
                      {day.label}
+                     {/* Active dot indicator */}
+                     {selectedDay === day.id && (
+                       <span className="absolute -bottom-1.5 w-1 h-1 bg-fuchsia-500 rounded-full animate-bounce"></span>
+                     )}
                    </button>
                  ))}
                </div>
@@ -130,10 +162,12 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
         {/* Helper text for empty days */}
         {filteredItems.length === 0 && (
-           <div className="text-center py-20 animate-fade-in">
-              <Calendar size={48} className="mx-auto text-slate-600 mb-4" />
-              <h3 className="text-xl text-white font-medium mb-2">На этот день меню еще формируется</h3>
-              <p className="text-slate-400">Попробуйте выбрать другой день или загляните в раздел "Пироги"</p>
+           <div className="text-center py-20 animate-fade-in bg-white/5 rounded-3xl border border-white/5 mx-auto max-w-2xl">
+              <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                <Calendar size={32} className="text-slate-500" />
+              </div>
+              <h3 className="text-2xl text-white font-bold mb-2">Меню формируется</h3>
+              <p className="text-slate-400">На этот день блюда еще не добавлены. Посмотрите другие дни!</p>
            </div>
         )}
 
@@ -152,7 +186,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
   );
 };
 
-// Extracted Card Component for better Video handling
+// Extracted Card Component
 const MenuItemCard: React.FC<{
   item: MenuItem;
   onAddToCart: (item: MenuItem) => void;
@@ -184,16 +218,15 @@ const MenuItemCard: React.FC<{
       onMouseLeave={handleMouseLeave}
     >
       
-      {/* Card Background Glow - Stronger and brighter */}
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-3xl opacity-0 group-hover:opacity-50 transition duration-500 blur-xl"></div>
+      {/* Card Background Glow */}
+      <div className="absolute -inset-[1px] bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-indigo-500 rounded-[24px] opacity-0 group-hover:opacity-100 transition duration-700 blur-md"></div>
       
-      <div className="relative flex flex-col h-full bg-slate-800/80 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden hover:border-white/20 transition-all shadow-xl">
+      <div className="relative flex flex-col h-full bg-slate-900 border border-white/10 rounded-3xl overflow-hidden hover:border-transparent transition-all shadow-xl">
         {/* Image/Video Area */}
         <div 
           className="relative aspect-[4/3] overflow-hidden cursor-pointer"
           onClick={() => onOpenModal(item)}
         >
-          {/* Static Image with Lazy Loading & Fallback */}
           <img 
             src={item.image} 
             alt={item.title} 
@@ -203,10 +236,9 @@ const MenuItemCard: React.FC<{
               target.src = FALLBACK_IMAGE;
               target.onerror = null;
             }}
-            className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${isPlaying ? 'opacity-0' : 'opacity-100'} brightness-105`}
+            className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${isPlaying ? 'opacity-0' : 'opacity-100'}`}
           />
           
-          {/* Video Layer */}
           {item.video && (
             <video
               ref={videoRef}
@@ -218,55 +250,39 @@ const MenuItemCard: React.FC<{
             />
           )}
 
-          {/* Video Indicator Icon (if video exists) */}
           {item.video && !isPlaying && (
-             <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md p-1.5 rounded-full text-white/90 border border-white/20 shadow-lg">
-               <Play size={12} fill="currentColor" />
+             <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md p-2 rounded-full text-white/90 border border-white/10 shadow-lg">
+               <Play size={10} fill="currentColor" />
              </div>
           )}
           
-          {/* Overlay Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-transparent to-transparent opacity-60"></div>
-          
           {/* Price Tag */}
-          <div className="absolute top-4 right-4 bg-slate-900/80 backdrop-blur-md text-white px-3 py-1.5 rounded-full font-bold border border-white/10 shadow-lg">
+          <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md text-slate-900 px-3 py-1.5 rounded-full font-bold shadow-lg text-sm">
             {item.price} ₽
           </div>
 
-           {/* Desktop Add Button */}
-          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2 backdrop-blur-[2px]">
-             <button 
-              onClick={(e) => { e.stopPropagation(); onAddToCart(item); }}
-              className="bg-white text-indigo-900 px-6 py-3 rounded-full font-bold transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 hover:scale-105 active:scale-95 shadow-xl shadow-white/10 flex items-center gap-2"
-             >
-               В корзину
-             </button>
-          </div>
+           {/* Add Button Overlay */}
+          <button 
+            onClick={(e) => { e.stopPropagation(); onAddToCart(item); }}
+            className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/40 transform translate-y-14 group-hover:translate-y-0 transition-all duration-300 hover:scale-110 active:scale-95"
+          >
+             <Plus size={20} />
+          </button>
         </div>
         
         {/* Content */}
-        <div className="flex flex-col flex-1 p-6 cursor-pointer bg-gradient-to-b from-transparent to-slate-900/50" onClick={() => onOpenModal(item)}>
-          <div className="flex justify-between items-start mb-2">
-            <h3 className="text-lg font-bold text-white group-hover:text-indigo-300 transition-colors drop-shadow-sm">
-              {item.title}
-            </h3>
-          </div>
+        <div className="flex flex-col flex-1 p-5 cursor-pointer" onClick={() => onOpenModal(item)}>
+          <h3 className="text-lg font-bold text-white group-hover:text-indigo-300 transition-colors mb-2">
+            {item.title}
+          </h3>
           <p className="text-slate-400 text-sm leading-relaxed mb-4 line-clamp-2">
             {item.description}
           </p>
           
-          <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/10">
-            <span className="text-xs font-medium text-indigo-200 bg-indigo-500/10 border border-indigo-500/20 px-2 py-1 rounded">
+          <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/5">
+            <span className="text-xs font-semibold text-slate-500">
               {item.weight} • {item.calories} ккал
             </span>
-            
-            {/* Mobile Button */}
-            <button 
-              onClick={(e) => { e.stopPropagation(); onAddToCart(item); }}
-              className="md:hidden w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center active:bg-indigo-600 shadow-lg shadow-indigo-500/30"
-            >
-              <Plus size={16} />
-            </button>
           </div>
         </div>
       </div>

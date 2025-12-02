@@ -16,24 +16,24 @@ export const IMAGES = {
   lunch7: "https://images.unsplash.com/photo-1548943487-a2e4e43b485c?q=80&w=1000&auto=format&fit=crop", // Tom Yum
   lunch8: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?q=80&w=1000&auto=format&fit=crop", // Caesar
   
-  // Pies
-  pie1: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?q=80&w=1000&auto=format&fit=crop", // Pie/Cake
-  pie2: "https://images.unsplash.com/photo-1519915028121-7d3463d20b13?q=80&w=1000&auto=format&fit=crop", // Berry Tart
-  pie3: "https://images.unsplash.com/photo-1572383672419-ab4779986b3e?q=80&w=1000&auto=format&fit=crop", // Savory Pie
-  pie4: "https://images.unsplash.com/photo-1554298128-c99938877548?q=80&w=1000&auto=format&fit=crop", // Quiche
+  // Pies (Images kept for fallback/extras if needed, but categories removed)
+  pie1: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?q=80&w=1000&auto=format&fit=crop", 
+  pie2: "https://images.unsplash.com/photo-1519915028121-7d3463d20b13?q=80&w=1000&auto=format&fit=crop", 
+  pie3: "https://images.unsplash.com/photo-1572383672419-ab4779986b3e?q=80&w=1000&auto=format&fit=crop", 
+  pie4: "https://images.unsplash.com/photo-1554298128-c99938877548?q=80&w=1000&auto=format&fit=crop", 
 
-  // Catering
-  catering1: "https://images.unsplash.com/photo-1572695157363-bc31c5d4efb5?q=80&w=1000&auto=format&fit=crop", // Bruschetta
-  catering2: "https://images.unsplash.com/photo-1621644837549-01121d58d4a6?q=80&w=1000&auto=format&fit=crop", // Canape salmon
-  catering3: "https://images.unsplash.com/photo-1541529086526-db283c563270?q=80&w=1000&auto=format&fit=crop", // Burgers
-  catering4: "https://images.unsplash.com/photo-1560155016-bd4879ae8f21?q=80&w=1000&auto=format&fit=crop", // Cheese plate
+  // Catering (Images kept for fallback)
+  catering1: "https://images.unsplash.com/photo-1572695157363-bc31c5d4efb5?q=80&w=1000&auto=format&fit=crop",
+  catering2: "https://images.unsplash.com/photo-1621644837549-01121d58d4a6?q=80&w=1000&auto=format&fit=crop",
+  catering3: "https://images.unsplash.com/photo-1541529086526-db283c563270?q=80&w=1000&auto=format&fit=crop",
+  catering4: "https://images.unsplash.com/photo-1560155016-bd4879ae8f21?q=80&w=1000&auto=format&fit=crop",
 
   // Extras
-  drink1: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?q=80&w=1000&auto=format&fit=crop", // Red drink
-  drink2: "https://images.unsplash.com/photo-1536782376439-3c9da7120359?q=80&w=1000&auto=format&fit=crop", // Matcha
-  dessert1: "https://images.unsplash.com/photo-1509482560494-4126f8225994?q=80&w=1000&auto=format&fit=crop", // Cheesecake
-  drink3: "https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=1000&auto=format&fit=crop", // Orange Juice
-  sauce1: "https://images.unsplash.com/photo-1599307221008-0138982cb12d?q=80&w=1000&auto=format&fit=crop" // Pesto
+  drink1: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?q=80&w=1000&auto=format&fit=crop", 
+  drink2: "https://images.unsplash.com/photo-1536782376439-3c9da7120359?q=80&w=1000&auto=format&fit=crop", 
+  dessert1: "https://images.unsplash.com/photo-1509482560494-4126f8225994?q=80&w=1000&auto=format&fit=crop", 
+  drink3: "https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=1000&auto=format&fit=crop", 
+  sauce1: "https://images.unsplash.com/photo-1599307221008-0138982cb12d?q=80&w=1000&auto=format&fit=crop" 
 };
 
 // Generic stock video for food
@@ -47,116 +47,56 @@ export const MOCK_MENU: MenuItem[] = [
     title: 'Боул с лососем и киноа', 
     description: 'Свежий лосось, авокадо, киноа, огурцы, эдамаме и фирменный ореховый соус.', 
     price: 590, weight: '350г', category: 'lunch', image: IMAGES.lunch1, video: SAMPLE_VIDEO, 
-    calories: 450, protein: 28, fats: 18, carbs: 42, availableDays: [1, 3, 5] 
+    calories: 450, protein: 28, fats: 18, carbs: 42, availableDays: [1, 3, 5, 0] 
   },
   { 
     id: '2', 
     title: 'Салат с грудкой гриль', 
     description: 'Микс салата, помидоры черри, куриное филе на гриле, пармезан, бальзамик.', 
     price: 450, weight: '300г', category: 'lunch', image: IMAGES.lunch2, 
-    calories: 320, protein: 35, fats: 12, carbs: 15, availableDays: [1, 2, 4] 
+    calories: 320, protein: 35, fats: 12, carbs: 15, availableDays: [1, 2, 4, 6] 
   },
   { 
     id: '3', 
     title: 'Обед "Сытный"', 
     description: 'Густой томатный суп, запеченный картофель по-деревенски, мясные тефтели в соусе.', 
     price: 490, weight: '500г', category: 'lunch', image: IMAGES.lunch3, video: SAMPLE_VIDEO_2, 
-    calories: 680, protein: 40, fats: 35, carbs: 55, availableDays: [2, 4, 5] 
+    calories: 680, protein: 40, fats: 35, carbs: 55, availableDays: [2, 4, 5, 0] 
   },
   { 
     id: '4', 
     title: 'Паста Карбонара', 
     description: 'Классическая итальянская паста с беконом, сливочным соусом и желтком.', 
     price: 520, weight: '350г', category: 'lunch', image: IMAGES.lunch4, 
-    calories: 700, protein: 25, fats: 40, carbs: 60, availableDays: [3, 5] 
+    calories: 700, protein: 25, fats: 40, carbs: 60, availableDays: [3, 5, 6] 
   },
   { 
     id: '5', 
     title: 'Куриный суп-лапша', 
     description: 'Легкий, но питательный суп с домашней лапшой, зеленью и фермерской курицей.', 
     price: 350, weight: '300г', category: 'lunch', image: IMAGES.lunch5, 
-    calories: 250, protein: 15, fats: 10, carbs: 25, availableDays: [1, 2, 3, 4, 5] 
+    calories: 250, protein: 15, fats: 10, carbs: 25, availableDays: [1, 2, 3, 4, 5, 6, 0] 
   },
   { 
     id: '6', 
     title: 'Бефстроганов с пюре', 
     description: 'Нежная говядина в сливочно-грибном соусе с воздушным картофельным пюре.', 
     price: 550, weight: '400г', category: 'lunch', image: IMAGES.lunch6, 
-    calories: 620, protein: 32, fats: 30, carbs: 45, availableDays: [1, 3] 
+    calories: 620, protein: 32, fats: 30, carbs: 45, availableDays: [1, 3, 0] 
   },
   { 
     id: '7', 
     title: 'Том Ям с креветками', 
     description: 'Тайский суп на кокосовом молоке с креветками, грибами и рисом жасмин.', 
     price: 620, weight: '450г', category: 'lunch', image: IMAGES.lunch7, video: SAMPLE_VIDEO,
-    calories: 480, protein: 22, fats: 25, carbs: 35, availableDays: [2, 4] 
+    calories: 480, protein: 22, fats: 25, carbs: 35, availableDays: [2, 4, 6] 
   },
   { 
     id: '8', 
     title: 'Цезарь с креветками', 
     description: 'Хрустящий ромэн, тигровые креветки, пармезан, гренки и соус Цезарь.', 
     price: 580, weight: '280г', category: 'lunch', image: IMAGES.lunch8, 
-    calories: 380, protein: 24, fats: 20, carbs: 18, availableDays: [2, 5] 
-  },
-
-  // --- PIES ---
-  { 
-    id: '9', 
-    title: 'Осетинский пирог', 
-    description: 'Традиционный пирог с осетинским сыром и свежей зеленью, тонкое тесто.', 
-    price: 750, weight: '800г', category: 'pies', image: IMAGES.pie1, video: SAMPLE_VIDEO_2, 
-    calories: 2100, protein: 80, fats: 90, carbs: 240 
-  },
-  { 
-    id: '10', 
-    title: 'Ягодный Тарт', 
-    description: 'Нежная песочная основа, заварной ванильный крем и свежие лесные ягоды.', 
-    price: 650, weight: '900г', category: 'pies', image: IMAGES.pie2, 
-    calories: 1800, protein: 20, fats: 80, carbs: 250 
-  },
-  { 
-    id: '11', 
-    title: 'Мясной пирог', 
-    description: 'Сочная рубленая говядина со специями в хрустящем слоеном тесте.', 
-    price: 890, weight: '1кг', category: 'pies', image: IMAGES.pie3, video: SAMPLE_VIDEO, 
-    calories: 2400, protein: 120, fats: 110, carbs: 200 
-  },
-  { 
-    id: '12', 
-    title: 'Киш со шпинатом', 
-    description: 'Французский открытый пирог с брынзой, шпинатом и сливками.', 
-    price: 720, weight: '850г', category: 'pies', image: IMAGES.pie4, 
-    calories: 1950, protein: 60, fats: 100, carbs: 180 
-  },
-
-  // --- CATERING ---
-  { 
-    id: '13', 
-    title: 'Сет брускетт', 
-    description: 'Ассорти из 12 брускетт: слабосоленый лосось, ростбиф, вяленые томаты.', 
-    price: 2900, weight: '1.2кг', category: 'catering', image: IMAGES.catering1, 
-    calories: 1200, protein: 60, fats: 40, carbs: 140 
-  },
-  { 
-    id: '14', 
-    title: 'Канапе "Премиум"', 
-    description: 'Изысканные закуски для фуршета на 10-12 персон. Идеально под игристое.', 
-    price: 3500, weight: '1кг', category: 'catering', image: IMAGES.catering2, video: SAMPLE_VIDEO_2, 
-    calories: 1500, protein: 70, fats: 80, carbs: 100 
-  },
-  { 
-    id: '15', 
-    title: 'Мини-бургеры BBQ', 
-    description: 'Сет из 12 сочных мини-бургеров с говядиной и соусом барбекю.', 
-    price: 3200, weight: '1.5кг', category: 'catering', image: IMAGES.catering3, 
-    calories: 2800, protein: 140, fats: 160, carbs: 220 
-  },
-  { 
-    id: '16', 
-    title: 'Сырное плато', 
-    description: 'Бри, Дор Блю, Пармезан, Чеддер, мед, орехи и виноград.', 
-    price: 250, weight: '600г', category: 'catering', image: IMAGES.catering4, 
-    calories: 1900, protein: 90, fats: 140, carbs: 40 
+    calories: 380, protein: 24, fats: 20, carbs: 18, availableDays: [2, 5, 6] 
   },
 
   // --- EXTRAS (Upsell) ---
@@ -199,8 +139,8 @@ export const MOCK_MENU: MenuItem[] = [
 
 export const REVIEWS = [
   { id: 1, name: "Алексей С.", text: "Лучшие ланчи в офис. Всегда горячее и вовремя.", role: "CEO, TechCorp" },
-  { id: 2, name: "Мария В.", text: "Заказывали кейтеринг на день рождения. Гости в восторге.", role: "Event Manager" },
-  { id: 3, name: "Дмитрий К.", text: "Осетинские пироги как домашние. Очень рекомендую.", role: "Дизайнер" }
+  { id: 2, name: "Мария В.", text: "Еда как дома, очень вкусно. Порции большие.", role: "Менеджер" },
+  { id: 3, name: "Дмитрий К.", text: "Заказываем на всю команду, сервис на высоте.", role: "Дизайнер" }
 ];
 
 export const FAQ = [
