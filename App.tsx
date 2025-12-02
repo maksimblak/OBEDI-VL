@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShoppingBag, Menu as MenuIcon, X, Zap, Settings2, RotateCcw, LogIn, Utensils, Star, Clock, Truck, ChevronDown, ChevronUp, MapPin, Phone, Loader2, Check, ChefHat, Smile, Smartphone } from 'lucide-react';
+import { ShoppingBag, Menu as MenuIcon, X, Zap, Settings2, RotateCcw, LogIn, Utensils, Star, Clock, ChevronDown, ChevronUp, MapPin, Phone, Instagram, Send, Check, Thermometer, Leaf, Award } from 'lucide-react';
 import { MenuSection } from './components/MenuSection';
 import { CartSidebar } from './components/CartSidebar';
 import { AIChef } from './components/AIChef';
@@ -176,6 +176,11 @@ export default function App() {
     }
   };
 
+  // Helper to create set for "Featured Sets"
+  const createSet = (ids: string[]) => {
+      return menuItems.filter(i => ids.includes(i.id));
+  };
+
   return (
     <div className="relative min-h-screen bg-slate-950 overflow-hidden font-sans">
       
@@ -298,7 +303,7 @@ export default function App() {
         </div>
       )}
 
-      {/* HERO SECTION - UPDATED */}
+      {/* HERO SECTION */}
       <header className="relative w-full min-h-[95vh] flex items-center justify-center overflow-hidden pb-10">
         
         {/* Background Image Layer */}
@@ -326,7 +331,7 @@ export default function App() {
             Владивосток
           </div>
           
-          {/* Main Typography - Strong USP */}
+          {/* Main Typography */}
           <h1 className="text-4xl md:text-7xl font-bold text-white mb-8 leading-tight drop-shadow-2xl animate-fade-in max-w-5xl">
              Вкусные обеды в офис <br />
              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-fuchsia-400 to-indigo-400 animate-shine bg-[length:200%_auto]">
@@ -375,7 +380,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* FEATURED COMPLEXES SECTION (New) */}
+      {/* FEATURED COMPLEXES SECTION */}
       <section id="featured-sets" className="py-24 relative z-10 bg-slate-950">
          <div className="max-w-7xl mx-auto px-4 md:px-8">
             <div className="text-center mb-16">
@@ -385,52 +390,48 @@ export default function App() {
 
             <div className="grid md:grid-cols-3 gap-8">
                {/* Set 1: Light */}
-               <div className="group relative rounded-3xl overflow-hidden border border-white/10 bg-slate-900 hover:border-indigo-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-500/20">
+               <div className="group relative rounded-3xl overflow-hidden border border-white/10 bg-slate-900 hover:border-indigo-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-500/20 flex flex-col">
                   <div className="h-48 overflow-hidden relative">
                     <img src={IMAGES.lunch2} alt="Лайт Обед" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                     <div className="absolute top-4 right-4 bg-indigo-500 text-white font-bold px-3 py-1 rounded-full text-sm shadow-lg">350 ₽</div>
                   </div>
-                  <div className="p-8">
+                  <div className="p-8 flex flex-col flex-1">
                     <h3 className="text-2xl font-bold text-white mb-2">Лайт</h3>
                     <p className="text-slate-400 text-sm mb-6">Идеально для тех, кто следит за фигурой, но не хочет голодать.</p>
-                    <ul className="space-y-3 mb-8">
-                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Легкий овощной салат</li>
-                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Суп дня (250мл)</li>
-                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Хлебная корзина</li>
+                    <ul className="space-y-2 mb-8 flex-1">
+                       <li className="flex items-center gap-2 text-sm text-slate-300"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div> Салат овощной</li>
+                       <li className="flex items-center gap-2 text-sm text-slate-300"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div> Суп дня (250мл)</li>
+                       <li className="flex items-center gap-2 text-sm text-slate-300"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div> Хлебная корзина</li>
                     </ul>
                     <button 
-                      onClick={() => addToCart({
-                         id: 'set-light', title: 'Обед "Лайт"', price: 350, description: 'Легкий салат, суп дня и хлеб.', category: 'lunch', image: IMAGES.lunch2, weight: '550г', calories: 450
-                      } as MenuItem)}
-                      className="w-full py-3 rounded-xl border border-indigo-500/30 text-indigo-300 font-bold hover:bg-indigo-500 hover:text-white transition-all"
+                      onClick={() => addMultipleToCart(createSet(['2', '5']))} 
+                      className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 hover:border-indigo-500/50 hover:text-indigo-300 transition-all"
                     >
                       В корзину
                     </button>
                   </div>
                </div>
 
-               {/* Set 2: Standard (Featured) */}
-               <div className="group relative rounded-3xl overflow-hidden border border-fuchsia-500/30 bg-slate-800 transform scale-105 shadow-xl hover:border-fuchsia-500 hover:shadow-fuchsia-500/20 transition-all duration-300 z-10">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-fuchsia-500"></div>
+               {/* Set 2: Standard (Highlighted) */}
+               <div className="group relative rounded-3xl overflow-hidden border border-fuchsia-500/50 bg-slate-900 shadow-[0_0_30px_rgba(168,85,247,0.15)] hover:shadow-fuchsia-500/30 transition-all duration-300 hover:-translate-y-2 scale-105 z-10 flex flex-col">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-indigo-500"></div>
                   <div className="h-52 overflow-hidden relative">
                     <img src={IMAGES.lunch6} alt="Стандарт Обед" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                    <div className="absolute top-4 right-4 bg-fuchsia-500 text-white font-bold px-3 py-1 rounded-full text-sm shadow-lg">450 ₽</div>
-                    <div className="absolute top-4 left-4 bg-white/20 backdrop-blur-md text-white font-bold px-3 py-1 rounded-full text-xs border border-white/20">Хит продаж</div>
+                    <div className="absolute top-4 right-4 bg-fuchsia-600 text-white font-bold px-3 py-1 rounded-full text-sm shadow-lg">450 ₽</div>
+                    <div className="absolute top-4 left-4 bg-white text-black font-bold px-2 py-1 rounded-md text-xs uppercase tracking-wider">Хит</div>
                   </div>
-                  <div className="p-8">
+                  <div className="p-8 flex flex-col flex-1">
                     <h3 className="text-2xl font-bold text-white mb-2">Стандарт</h3>
-                    <p className="text-slate-300 text-sm mb-6">Классический сытный обед. Выбор большинства наших клиентов.</p>
-                    <ul className="space-y-3 mb-8">
-                       <li className="flex items-center gap-3 text-slate-200 text-sm"><Check size={16} className="text-fuchsia-400" /> Салат "Витаминный"</li>
-                       <li className="flex items-center gap-3 text-slate-200 text-sm"><Check size={16} className="text-fuchsia-400" /> Горячее (котлета/гуляш)</li>
-                       <li className="flex items-center gap-3 text-slate-200 text-sm"><Check size={16} className="text-fuchsia-400" /> Гарнир на выбор</li>
-                       <li className="flex items-center gap-3 text-slate-200 text-sm"><Check size={16} className="text-fuchsia-400" /> Напиток (морс/чай)</li>
+                    <p className="text-slate-400 text-sm mb-6">Классический сытный обед. Выбор большинства наших клиентов.</p>
+                    <ul className="space-y-2 mb-8 flex-1">
+                       <li className="flex items-center gap-2 text-sm text-slate-300"><div className="w-1.5 h-1.5 rounded-full bg-fuchsia-500"></div> Суп дня (300мл)</li>
+                       <li className="flex items-center gap-2 text-sm text-slate-300"><div className="w-1.5 h-1.5 rounded-full bg-fuchsia-500"></div> Горячее с гарниром</li>
+                       <li className="flex items-center gap-2 text-sm text-slate-300"><div className="w-1.5 h-1.5 rounded-full bg-fuchsia-500"></div> Напиток на выбор</li>
+                       <li className="flex items-center gap-2 text-sm text-slate-300"><div className="w-1.5 h-1.5 rounded-full bg-fuchsia-500"></div> Хлеб</li>
                     </ul>
                     <button 
-                      onClick={() => addToCart({
-                         id: 'set-standard', title: 'Обед "Стандарт"', price: 450, description: 'Салат, горячее с гарниром и напиток.', category: 'lunch', image: IMAGES.lunch6, weight: '750г', calories: 750
-                      } as MenuItem)}
-                      className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white font-bold hover:shadow-lg hover:scale-[1.02] transition-all shadow-indigo-500/20"
+                       onClick={() => addMultipleToCart(createSet(['5', '6', '17']))}
+                       className="w-full py-3 rounded-xl bg-fuchsia-600 text-white font-bold hover:bg-fuchsia-500 transition-all shadow-lg shadow-fuchsia-600/20"
                     >
                       В корзину
                     </button>
@@ -438,25 +439,23 @@ export default function App() {
                </div>
 
                {/* Set 3: Maxi */}
-               <div className="group relative rounded-3xl overflow-hidden border border-white/10 bg-slate-900 hover:border-indigo-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-500/20">
+               <div className="group relative rounded-3xl overflow-hidden border border-white/10 bg-slate-900 hover:border-cyan-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-cyan-500/20 flex flex-col">
                   <div className="h-48 overflow-hidden relative">
                     <img src={IMAGES.lunch3} alt="Макси Обед" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                    <div className="absolute top-4 right-4 bg-indigo-500 text-white font-bold px-3 py-1 rounded-full text-sm shadow-lg">590 ₽</div>
+                    <div className="absolute top-4 right-4 bg-cyan-600 text-white font-bold px-3 py-1 rounded-full text-sm shadow-lg">590 ₽</div>
                   </div>
-                  <div className="p-8">
+                  <div className="p-8 flex flex-col flex-1">
                     <h3 className="text-2xl font-bold text-white mb-2">Макси</h3>
-                    <p className="text-slate-400 text-sm mb-6">Полный набор для максимальной энергии. Первое, второе и десерт.</p>
-                    <ul className="space-y-3 mb-8">
-                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Полный салат</li>
-                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Суп дня (350мл)</li>
-                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Горячее с гарниром</li>
-                       <li className="flex items-center gap-3 text-slate-300 text-sm"><Check size={16} className="text-indigo-400" /> Десерт или выпечка</li>
+                    <p className="text-slate-400 text-sm mb-6">Для тех, кто сильно проголодался. Полный набор блюд.</p>
+                    <ul className="space-y-2 mb-8 flex-1">
+                       <li className="flex items-center gap-2 text-sm text-slate-300"><div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div> Салат</li>
+                       <li className="flex items-center gap-2 text-sm text-slate-300"><div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div> Суп</li>
+                       <li className="flex items-center gap-2 text-sm text-slate-300"><div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div> Горячее</li>
+                       <li className="flex items-center gap-2 text-sm text-slate-300"><div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div> Напиток + Десерт</li>
                     </ul>
                     <button 
-                      onClick={() => addToCart({
-                         id: 'set-maxi', title: 'Обед "Макси"', price: 590, description: 'Салат, суп, горячее, гарнир, десерт и напиток.', category: 'lunch', image: IMAGES.lunch3, weight: '950г', calories: 1100
-                      } as MenuItem)}
-                      className="w-full py-3 rounded-xl border border-indigo-500/30 text-indigo-300 font-bold hover:bg-indigo-500 hover:text-white transition-all"
+                      onClick={() => addMultipleToCart(createSet(['3', '17', '19']))}
+                      className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 hover:border-cyan-500/50 hover:text-cyan-300 transition-all"
                     >
                       В корзину
                     </button>
@@ -466,127 +465,122 @@ export default function App() {
          </div>
       </section>
 
-      {/* Infinite Marquee */}
-      <div className="relative w-full overflow-hidden bg-indigo-950/30 border-y border-white/10 py-4 z-10 backdrop-blur-sm">
-        <div className="flex animate-marquee whitespace-nowrap">
-          {[1,2,3,4].map((i) => (
-             <div key={i} className="flex items-center gap-12 px-6 text-indigo-200 font-medium text-sm uppercase tracking-widest drop-shadow-sm">
-                <span>⚡ Быстрая доставка обедов</span>
-                <span className="text-fuchsia-400 drop-shadow-[0_0_5px_currentColor]">•</span>
-                <span>🔥 Горячие блюда</span>
-                <span className="text-fuchsia-400 drop-shadow-[0_0_5px_currentColor]">•</span>
-                <span>🥗 Меню обновляется ежедневно</span>
-                <span className="text-fuchsia-400 drop-shadow-[0_0_5px_currentColor]">•</span>
-                <span>🍲 По-домашнему вкусно</span>
-                <span className="text-fuchsia-400 drop-shadow-[0_0_5px_currentColor]">•</span>
-             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Menu Area */}
-      {isMenuLoading ? (
-        <div id="menu-start" className="py-24 flex flex-col items-center justify-center text-white relative z-10">
-          <Loader2 size={48} className="animate-spin text-indigo-500 mb-4" />
-          <p className="text-slate-400">Загружаем меню из ресторана...</p>
-        </div>
-      ) : (
-        <MenuSection 
-          items={menuItems} 
-          activeCategory={activeCategory} 
-          onCategoryChange={setActiveCategory}
-          onAddToCart={addToCart}
-          onOpenModal={setModalItem}
-        />
-      )}
-
-      {/* HOW IT WORKS SECTION */}
-      <section id="how-it-works" className="py-24 relative z-10 bg-slate-900/30 border-t border-white/5">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-        <div className="max-w-7xl mx-auto px-4 md:px-8 relative">
-          
-          <div className="text-center mb-20">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 drop-shadow-lg">
-              Как мы работаем
-            </h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-              Мы оптимизировали каждый этап, чтобы вы получили горячий обед максимально быстро.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 relative">
-             {/* Connection Line Desktop */}
-             <div className="hidden md:block absolute top-12 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-indigo-500/20 via-fuchsia-500/50 to-indigo-500/20"></div>
-
-             {/* Steps */}
-             {[
-               { icon: Smartphone, title: "Заказ в 1 клик", text: "Выберите блюда в меню или соберите свой идеальный ланч в конструкторе." },
-               { icon: ChefHat, title: "Готовим сейчас", text: "Не разогреваем, а готовим «из-под ножа» сразу после подтверждения заявки." },
-               { icon: Truck, title: "Турбо-доставка", text: "Собственная служба курьеров знает короткие пути. Привезем горячим." },
-               { icon: Smile, title: "Бонусы и вкус", text: "Наслаждайтесь обедом и получайте кэшбэк баллами на счет." }
-             ].map((step, idx) => (
-               <div key={idx} className="relative flex flex-col items-center text-center group">
-                 
-                 <div className="w-24 h-24 rounded-3xl rotate-3 bg-surface border border-white/10 flex items-center justify-center mb-8 relative z-10 transition-all duration-500 group-hover:rotate-0 group-hover:scale-110 group-hover:border-indigo-500/50 shadow-2xl shadow-black/50">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-fuchsia-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <step.icon size={36} className="text-white relative z-10 drop-shadow-md" />
-                    
-                    {/* Number Badge */}
-                    <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 flex items-center justify-center text-white font-bold text-sm shadow-lg border-2 border-slate-900">
-                      {idx + 1}
-                    </div>
-                 </div>
-
-                 <h3 className="text-xl font-bold text-white mb-3 group-hover:text-indigo-300 transition-colors">
-                   {step.title}
-                 </h3>
-                 <p className="text-slate-400 text-sm leading-relaxed">
-                   {step.text}
-                 </p>
+      {/* NEW FEATURES SECTION (Styled like user requested) */}
+      <section className="py-24 relative z-10 overflow-hidden bg-gradient-to-b from-slate-950 to-slate-900">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            
+            {/* Image Side with Decorative Elements */}
+            <div className="w-full lg:w-1/2 relative order-2 lg:order-1">
+               {/* Decorative blob behind - CHANGED to purple/fuchsia */}
+               <div className="absolute inset-0 bg-gradient-to-tr from-fuchsia-500/20 to-indigo-500/20 rounded-full blur-[60px] animate-pulse-slow"></div>
+               
+               <div className="relative rounded-full overflow-hidden border-4 border-white/5 shadow-2xl shadow-indigo-500/10 aspect-square max-w-[500px] mx-auto group">
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10"></div>
+                  <img src={IMAGES.lunch1} alt="Fresh Healthy Food" className="object-cover w-full h-full hover:scale-105 transition-transform duration-1000" />
                </div>
-             ))}
-          </div>
 
+               {/* Floating badge - CHANGED to purple theme */}
+               <div className="absolute top-10 left-0 lg:left-10 bg-surface/90 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-xl animate-float z-20">
+                  <div className="flex items-center gap-3">
+                     <div className="bg-purple-500/20 p-2 rounded-full text-purple-400">
+                        <Leaf size={20} />
+                     </div>
+                     <div>
+                       <div className="font-bold text-white text-sm">100%</div>
+                       <div className="text-xs text-slate-400">Натурально</div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            {/* Text Side */}
+            <div className="w-full lg:w-1/2 space-y-12 order-1 lg:order-2">
+               <h2 className="text-3xl md:text-5xl font-bold text-white mb-8 leading-tight">
+                  Стандарты <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-fuchsia-400">качества</span>
+               </h2>
+
+               {/* Item 1 - CHANGED to Purple */}
+               <div className="flex gap-6 group">
+                  <div className="w-14 h-14 rounded-full bg-purple-600 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(147,51,234,0.4)] group-hover:scale-110 transition-transform duration-300">
+                     <Award size={28} className="text-white" />
+                  </div>
+                  <div>
+                     <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-purple-400 transition-colors">Качество на первом месте</h3>
+                     <ul className="space-y-2 text-slate-400 leading-relaxed">
+                        <li>— Мы работаем только с проверенными поставщиками</li>
+                        <li>— Используем натуральные продукты с сертификатами качества</li>
+                        <li>— Не добавляем консервантов и химических веществ</li>
+                        <li>— Готовим с любовью, как дома</li>
+                     </ul>
+                  </div>
+               </div>
+
+               {/* Item 2 - Kept Indigo */}
+               <div className="flex gap-6 group">
+                  <div className="w-14 h-14 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(99,102,241,0.4)] group-hover:scale-110 transition-transform duration-300">
+                     <Thermometer size={28} className="text-white" />
+                  </div>
+                  <div>
+                     <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-indigo-400 transition-colors">Технология HotKeep</h3>
+                     <p className="text-slate-400 leading-relaxed">
+                        Благодаря специальным термосумкам и продуманной логистике, продукты сохраняют идеальную температуру. Обед приедет горячим, словно его только что сняли с плиты.
+                     </p>
+                  </div>
+               </div>
+
+               {/* Item 3 - CHANGED to Fuchsia */}
+               <div className="flex gap-6 group">
+                  <div className="w-14 h-14 rounded-full bg-fuchsia-600 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(192,38,211,0.4)] group-hover:scale-110 transition-transform duration-300">
+                     <Leaf size={28} className="text-white" />
+                  </div>
+                  <div>
+                     <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-fuchsia-400 transition-colors">Экологичность</h3>
+                     <p className="text-slate-400 leading-relaxed">
+                        Мы заботимся о планете! Используем безопасную упаковку, которую можно сдать на переработку. С Obedi VL вы получаете не только вкусную еду, но и уверенность в её безопасности.
+                     </p>
+                  </div>
+               </div>
+
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Delivery Info Section */}
+      {/* MENU SECTION */}
+      <MenuSection 
+        items={menuItems} 
+        activeCategory={activeCategory} 
+        onCategoryChange={setActiveCategory}
+        onAddToCart={addToCart}
+        onOpenModal={setModalItem}
+      />
+
+      {/* DELIVERY INFO */}
       <div id="delivery-info">
         <DeliveryInfo />
       </div>
 
-      {/* Reviews Section */}
-      <section id="reviews" className="py-24 relative z-10 border-t border-white/10 bg-surface/30 backdrop-blur-sm">
+      {/* REVIEWS SECTION */}
+      <section className="py-24 relative z-10">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 drop-shadow-lg">Впечатления</h2>
-              <p className="text-slate-400 max-w-md">Выбор топ-менеджеров и офисных команд Владивостока.</p>
-            </div>
-            <div className="flex items-center gap-2 glass px-4 py-2 rounded-full border-white/20">
-              <div className="flex">
-                {[1,2,3,4,5].map(i => <Star key={i} size={16} className="fill-amber-400 text-amber-400 drop-shadow-sm" />)}
-              </div>
-              <span className="text-white font-bold ml-1">4.9</span>
-              <span className="text-indigo-200 text-sm">/ 5.0</span>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {REVIEWS.map(review => (
-              <div key={review.id} className="glass p-8 rounded-3xl hover:bg-white/5 hover:border-white/20 transition-all duration-300 group">
-                <div className="mb-6 opacity-80">
-                  {[1,2,3,4,5].map(i => <Star key={i} size={14} className="fill-indigo-500 text-indigo-500 inline-block mr-1 group-hover:fill-fuchsia-500 group-hover:text-fuchsia-500 transition-colors" />)}
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">Отзывы клиентов</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            {REVIEWS.map((review) => (
+              <div key={review.id} className="glass p-8 rounded-3xl border border-white/5 relative">
+                <div className="absolute -top-4 -left-4 text-6xl text-indigo-500/20 font-serif">"</div>
+                <div className="flex gap-1 mb-4">
+                  {[1,2,3,4,5].map(i => <Star key={i} size={16} className="fill-yellow-400 text-yellow-400" />)}
                 </div>
-                <p className="text-slate-200 mb-6 leading-relaxed italic">"{review.text}"</p>
+                <p className="text-slate-300 mb-6 italic">{review.text}</p>
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
-                    {review.name.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-white text-sm">{review.name}</div>
-                    <div className="text-xs text-indigo-300">{review.role}</div>
-                  </div>
+                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+                      {review.name.charAt(0)}
+                   </div>
+                   <div>
+                      <div className="text-white font-bold text-sm">{review.name}</div>
+                      <div className="text-indigo-400 text-xs">{review.role}</div>
+                   </div>
                 </div>
               </div>
             ))}
@@ -594,104 +588,113 @@ export default function App() {
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section id="faq" className="py-24 max-w-3xl mx-auto px-4 relative z-10">
-        <h2 className="text-3xl font-bold text-white mb-12 text-center drop-shadow-lg">Важное</h2>
-        <div className="space-y-4">
-          {FAQ.map((item, idx) => (
-            <div key={idx} className="glass rounded-2xl overflow-hidden transition-all duration-300 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10">
-              <button 
-                onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                className="w-full flex justify-between items-center p-6 text-left hover:bg-white/5 transition-colors"
-              >
-                <span className="font-medium text-white pr-8">{item.q}</span>
-                {openFaq === idx ? <ChevronUp className="text-indigo-400" /> : <ChevronDown className="text-slate-500" />}
-              </button>
-              <div className={`px-6 text-slate-300 leading-relaxed overflow-hidden transition-all duration-300 ${openFaq === idx ? 'max-h-40 pb-6 opacity-100' : 'max-h-0 opacity-0'}`}>
-                {item.a}
+      {/* FAQ SECTION */}
+      <section className="py-24 relative z-10 bg-slate-900/50">
+        <div className="max-w-3xl mx-auto px-4 md:px-8">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">Часто задаваемые вопросы</h2>
+          <div className="space-y-4">
+            {FAQ.map((item, idx) => (
+              <div key={idx} className="glass rounded-2xl overflow-hidden border border-white/5">
+                <button 
+                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                  className="w-full flex justify-between items-center p-6 text-left hover:bg-white/5 transition"
+                >
+                  <span className="text-lg font-medium text-white">{item.q}</span>
+                  {openFaq === idx ? <ChevronUp className="text-indigo-400" /> : <ChevronDown className="text-slate-500" />}
+                </button>
+                <div className={`px-6 text-slate-400 leading-relaxed transition-all duration-300 overflow-hidden ${openFaq === idx ? 'max-h-48 pb-6 opacity-100' : 'max-h-0 opacity-0'}`}>
+                  {item.a}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative bg-slate-950 pt-24 pb-12 overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50 shadow-[0_0_10px_#6366f1]"></div>
-        
-        <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-            <div className="col-span-1 md:col-span-2">
-               <div className="mb-6">
-                 <Logo variant="footer" />
+      {/* FOOTER */}
+      <footer className="relative z-10 bg-black pt-20 pb-10 border-t border-white/10">
+         <div className="max-w-7xl mx-auto px-4 md:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+               <div className="col-span-1 md:col-span-1">
+                  <Logo variant="footer" className="mb-6" />
+                  <p className="text-slate-500 text-sm mb-6">
+                    Вкусная домашняя еда с доставкой в офис и на дом. Готовим с любовью во Владивостоке.
+                  </p>
+                  <div className="flex gap-4">
+                     <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-indigo-600 hover:text-white transition"><Instagram size={18} /></a>
+                     <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-indigo-600 hover:text-white transition"><Send size={18} /></a>
+                  </div>
                </div>
-              <p className="text-slate-400 max-w-sm mb-8 leading-relaxed">
-                Доставка комплексных обедов в офис и на дом. <br/>
-                Владивосток, 2024.
-              </p>
-              <div className="flex gap-4">
-                 <a href="#" className="w-10 h-10 rounded-full glass flex items-center justify-center text-slate-400 hover:text-white hover:bg-indigo-600 hover:border-indigo-500 transition-all hover:shadow-[0_0_15px_rgba(99,102,241,0.5)]">
-                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" /></svg>
-                 </a>
-                 <a href="#" className="w-10 h-10 rounded-full glass flex items-center justify-center text-slate-400 hover:text-white hover:bg-pink-600 hover:border-pink-500 transition-all hover:shadow-[0_0_15px_rgba(219,39,119,0.5)]">
-                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.468.99c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clipRule="evenodd" /></svg>
-                 </a>
-              </div>
+               
+               <div>
+                  <h4 className="text-white font-bold mb-6">Меню</h4>
+                  <ul className="space-y-4 text-sm text-slate-400">
+                     <li><button onClick={() => scrollToSection('featured-sets')} className="hover:text-indigo-400 transition">Комплексы</button></li>
+                     <li><button onClick={() => scrollToSection('menu-start')} className="hover:text-indigo-400 transition">Бизнес-ланчи</button></li>
+                     <li><button onClick={() => { setActiveCategory('extras'); scrollToSection('menu-start'); }} className="hover:text-indigo-400 transition">Десерты и напитки</button></li>
+                  </ul>
+               </div>
+
+               <div>
+                  <h4 className="text-white font-bold mb-6">Компания</h4>
+                  <ul className="space-y-4 text-sm text-slate-400">
+                     <li><button onClick={() => scrollToSection('delivery-info')} className="hover:text-indigo-400 transition">Доставка</button></li>
+                     <li><a href="#" className="hover:text-indigo-400 transition">О нас</a></li>
+                     <li><a href="#" className="hover:text-indigo-400 transition">Контакты</a></li>
+                  </ul>
+               </div>
+
+               <div>
+                  <h4 className="text-white font-bold mb-6">Контакты</h4>
+                  <ul className="space-y-4 text-sm text-slate-400">
+                     <li className="flex items-start gap-3">
+                        <MapPin size={18} className="text-indigo-500 shrink-0 mt-0.5" />
+                        <span>ул. Надибаидзе, 28, Владивосток</span>
+                     </li>
+                     <li className="flex items-center gap-3">
+                        <Phone size={18} className="text-indigo-500 shrink-0" />
+                        <span>+7 (423) 200-00-00</span>
+                     </li>
+                     <li className="flex items-center gap-3">
+                        <Clock size={18} className="text-indigo-500 shrink-0" />
+                        <span>Ежедневно 09:00 - 21:00</span>
+                     </li>
+                  </ul>
+               </div>
             </div>
             
-            <div>
-              <h4 className="font-bold text-white mb-6">Сервис</h4>
-              <ul className="space-y-4 text-slate-400 text-sm">
-                <li><button onClick={() => scrollToSection('how-it-works')} className="hover:text-fuchsia-400 transition">Как это работает</button></li>
-                <li><button onClick={() => scrollToSection('menu-start')} className="hover:text-fuchsia-400 transition">Меню доставки</button></li>
-                <li><button onClick={() => scrollToSection('reviews')} className="hover:text-fuchsia-400 transition">Отзывы</button></li>
-                <li><button onClick={() => scrollToSection('faq')} className="hover:text-fuchsia-400 transition">Вопросы и ответы</button></li>
-              </ul>
+            <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-600">
+               <div>© 2024 Obedi VL. Все права защищены.</div>
+               <div className="flex gap-6">
+                  <a href="#" className="hover:text-slate-400 transition">Политика конфиденциальности</a>
+                  <a href="#" className="hover:text-slate-400 transition">Публичная оферта</a>
+               </div>
             </div>
-
-            <div>
-               <h4 className="font-bold text-white mb-6">Контакты</h4>
-               <ul className="space-y-4 text-slate-400 text-sm">
-                 <li className="flex items-start gap-3">
-                   <MapPin size={18} className="text-indigo-400 mt-0.5 drop-shadow-sm" />
-                   <span>Адрес: ул. Надибаидзе, 28, Владивосток</span>
-                 </li>
-                 <li className="flex items-center gap-3">
-                   <Phone size={18} className="text-indigo-400 drop-shadow-sm" />
-                   <span>8 (902) 556-28-53</span>
-                 </li>
-                 <li className="flex items-center gap-3">
-                   <Clock size={18} className="text-indigo-400 drop-shadow-sm" />
-                   <span>Пн-Пт: 09:00 - 18:00</span>
-                 </li>
-               </ul>
-            </div>
-          </div>
-          
-          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
-            <p>© 2024 OBEDI VL. Made with love & code.</p>
-            <div className="flex gap-8">
-              <a href="#" className="hover:text-slate-300 transition">Privacy</a>
-              <a href="#" className="hover:text-slate-300 transition">Terms</a>
-            </div>
-          </div>
-        </div>
+         </div>
       </footer>
 
+      {/* MODALS */}
       <CartSidebar 
         isOpen={isCartOpen} 
         onClose={() => setIsCartOpen(false)} 
         cart={cart}
         onUpdateQuantity={updateQuantity}
         onRemove={removeFromCart}
-        onCheckout={() => setIsCheckoutOpen(true)}
+        onCheckout={() => {
+           setIsCartOpen(false);
+           setIsCheckoutOpen(true);
+        }}
       />
-      
-      <ProductModal 
-        item={modalItem} 
-        onClose={() => setModalItem(null)} 
-        onAddToCart={addToCart} 
-      />
+
+      <AIChef />
+
+      {modalItem && (
+        <ProductModal 
+          item={modalItem} 
+          onClose={() => setModalItem(null)} 
+          onAddToCart={addToCart} 
+        />
+      )}
 
       {isConstructorOpen && (
         <LunchConstructor 
@@ -703,31 +706,30 @@ export default function App() {
 
       {isCheckoutOpen && (
         <CheckoutModal 
-          cart={cart}
-          total={cart.reduce((sum, item) => sum + item.price * item.quantity, 0)}
-          onClose={() => setIsCheckoutOpen(false)}
-          onConfirm={handleCheckoutComplete}
+           cart={cart}
+           total={cart.reduce((sum, item) => sum + item.price * item.quantity, 0)}
+           onClose={() => setIsCheckoutOpen(false)}
+           onConfirm={handleCheckoutComplete}
         />
       )}
 
       {isAuthOpen && (
-        <AuthModal 
-            onClose={() => setIsAuthOpen(false)}
-            onLoginSuccess={handleLoginSuccess}
-        />
+          <AuthModal 
+             onClose={() => setIsAuthOpen(false)}
+             onLoginSuccess={handleLoginSuccess}
+          />
       )}
 
       {user && (
-        <UserProfile 
-            isOpen={isProfileOpen}
-            onClose={() => setIsProfileOpen(false)}
-            user={user}
-            onLogout={handleLogout}
-            onUpdateUser={setUser}
-        />
+          <UserProfile 
+              isOpen={isProfileOpen}
+              onClose={() => setIsProfileOpen(false)}
+              user={user}
+              onLogout={handleLogout}
+              onUpdateUser={setUser}
+          />
       )}
-      
-      <AIChef />
+
     </div>
   );
 }
