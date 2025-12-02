@@ -351,7 +351,7 @@ export default function App() {
             >
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-100 via-white to-indigo-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <Settings2 size={22} className="relative z-10 text-indigo-600" /> 
-              <span className="relative z-10">Собрать ланч</span>
+              <span className="relative z-10">Собрать комплексный обед</span>
             </button>
             <button 
               onClick={() => scrollToSection('menu-start')} 
