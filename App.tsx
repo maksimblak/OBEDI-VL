@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShoppingBag, Menu as MenuIcon, X, Zap, Settings2, RotateCcw, LogIn, Utensils, Star, Clock, Truck, ChevronDown, ChevronUp, MapPin, Phone, Loader2, Check } from 'lucide-react';
+import { ShoppingBag, Menu as MenuIcon, X, Zap, Settings2, RotateCcw, LogIn, Utensils, Star, Clock, Truck, ChevronDown, ChevronUp, MapPin, Phone, Loader2, Check, ChefHat, Smile, Smartphone } from 'lucide-react';
 import { MenuSection } from './components/MenuSection';
 import { CartSidebar } from './components/CartSidebar';
 import { AIChef } from './components/AIChef';
@@ -163,7 +164,6 @@ export default function App() {
   };
 
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const upsellItems = menuItems.filter(i => i.category === 'extras');
 
   const scrollToSection = (id: string) => {
     setIsMobileMenuOpen(false); // Close mobile menu if open
@@ -500,6 +500,56 @@ export default function App() {
         />
       )}
 
+      {/* HOW IT WORKS SECTION */}
+      <section id="how-it-works" className="py-24 relative z-10 bg-slate-900/30 border-t border-white/5">
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+        <div className="max-w-7xl mx-auto px-4 md:px-8 relative">
+          
+          <div className="text-center mb-20">
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 drop-shadow-lg">
+              Как мы работаем
+            </h2>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+              Мы оптимизировали каждый этап, чтобы вы получили горячий обед максимально быстро.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 relative">
+             {/* Connection Line Desktop */}
+             <div className="hidden md:block absolute top-12 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-indigo-500/20 via-fuchsia-500/50 to-indigo-500/20"></div>
+
+             {/* Steps */}
+             {[
+               { icon: Smartphone, title: "Заказ в 1 клик", text: "Выберите блюда в меню или соберите свой идеальный ланч в конструкторе." },
+               { icon: ChefHat, title: "Готовим сейчас", text: "Не разогреваем, а готовим «из-под ножа» сразу после подтверждения заявки." },
+               { icon: Truck, title: "Турбо-доставка", text: "Собственная служба курьеров знает короткие пути. Привезем горячим." },
+               { icon: Smile, title: "Бонусы и вкус", text: "Наслаждайтесь обедом и получайте кэшбэк баллами на счет." }
+             ].map((step, idx) => (
+               <div key={idx} className="relative flex flex-col items-center text-center group">
+                 
+                 <div className="w-24 h-24 rounded-3xl rotate-3 bg-surface border border-white/10 flex items-center justify-center mb-8 relative z-10 transition-all duration-500 group-hover:rotate-0 group-hover:scale-110 group-hover:border-indigo-500/50 shadow-2xl shadow-black/50">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-fuchsia-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <step.icon size={36} className="text-white relative z-10 drop-shadow-md" />
+                    
+                    {/* Number Badge */}
+                    <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 flex items-center justify-center text-white font-bold text-sm shadow-lg border-2 border-slate-900">
+                      {idx + 1}
+                    </div>
+                 </div>
+
+                 <h3 className="text-xl font-bold text-white mb-3 group-hover:text-indigo-300 transition-colors">
+                   {step.title}
+                 </h3>
+                 <p className="text-slate-400 text-sm leading-relaxed">
+                   {step.text}
+                 </p>
+               </div>
+             ))}
+          </div>
+
+        </div>
+      </section>
+
       {/* Delivery Info Section */}
       <div id="delivery-info">
         <DeliveryInfo />
@@ -632,10 +682,8 @@ export default function App() {
         isOpen={isCartOpen} 
         onClose={() => setIsCartOpen(false)} 
         cart={cart}
-        upsellItems={upsellItems}
         onUpdateQuantity={updateQuantity}
         onRemove={removeFromCart}
-        onAddToCart={addToCart}
         onCheckout={() => setIsCheckoutOpen(true)}
       />
       

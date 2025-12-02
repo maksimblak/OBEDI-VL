@@ -1,17 +1,15 @@
 
 import React, { useState } from 'react';
 import { X, Minus, Plus, Trash2, Share2, Check, ShoppingBag, AlertCircle } from 'lucide-react';
-import { CartItem, MenuItem } from '../types';
+import { CartItem } from '../types';
 import { FALLBACK_IMAGE } from '../data';
 
 interface CartSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   cart: CartItem[];
-  upsellItems: MenuItem[];
   onUpdateQuantity: (id: string, delta: number) => void;
   onRemove: (id: string) => void;
-  onAddToCart: (item: MenuItem) => void;
   onCheckout: () => void;
 }
 
@@ -19,10 +17,8 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   isOpen,
   onClose,
   cart,
-  upsellItems,
   onUpdateQuantity,
   onRemove,
-  onAddToCart,
   onCheckout
 }) => {
   const [copied, setCopied] = useState(false);
@@ -39,9 +35,6 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  // Filter upsell items to only show ones NOT in cart
-  const availableUpsells = upsellItems.filter(u => !cart.find(c => c.id === u.id));
 
   return (
     <>
@@ -154,36 +147,6 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
         {/* Footer Area */}
         <div className="bg-surface border-t border-white/5 p-6">
             
-            {/* Upsell Carousel */}
-            {availableUpsells.length > 0 && (
-              <div className="mb-6">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">С этим часто берут</div>
-                <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar -mx-2 px-2">
-                  {availableUpsells.map(item => (
-                    <div key={item.id} className="flex-shrink-0 w-32 bg-white/5 rounded-xl p-2 border border-white/5 hover:border-white/10 transition group cursor-pointer" onClick={() => onAddToCart(item)}>
-                      <div className="h-20 rounded-lg overflow-hidden mb-2 relative">
-                         <img 
-                            src={item.image} 
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = FALLBACK_IMAGE;
-                              target.onerror = null;
-                            }}
-                            className="w-full h-full object-cover" 
-                            alt={item.title} 
-                         />
-                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                           <Plus size={20} className="text-white" />
-                         </div>
-                      </div>
-                      <div className="text-xs font-medium text-white truncate">{item.title}</div>
-                      <div className="text-xs text-indigo-300 font-bold">{item.price} ₽</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Share Cart Feature */}
             {cart.length > 0 && (
                <button 
