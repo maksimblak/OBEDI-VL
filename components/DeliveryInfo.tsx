@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Clock, Wallet, Banknote, Car, Navigation, Search, CheckCircle2, ChevronRight, AlertCircle, Home } from 'lucide-react';
+import { MapPin, Clock, Wallet, Banknote, Car, Navigation, Search, CheckCircle2, ChevronRight, AlertCircle, Home, ArrowRight } from 'lucide-react';
 import { checkAddressZone } from '../services/geminiService';
 
 // Coordinates for Ulitsa Nadibaidze, 28, Vladivostok
@@ -18,9 +18,10 @@ interface ZoneData {
   price: string;
   description: string;
   distanceLimit: number;
-  color: string;
-  glowColor: string;
-  bgColor: string;
+  // Styling props
+  themeColor: string;
+  pillColor: string;
+  gradient: string;
 }
 
 const ZONES: ZoneData[] = [
@@ -31,9 +32,9 @@ const ZONES: ZoneData[] = [
     price: 'Бесплатно от 3000₽',
     description: 'Чуркин, Калинина, Окатовая, Змеинка, Диомид.',
     distanceLimit: 4, 
-    color: 'text-emerald-400',
-    glowColor: 'shadow-emerald-500/40 border-emerald-500/50',
-    bgColor: 'group-hover:bg-emerald-500/10'
+    themeColor: 'text-emerald-400',
+    pillColor: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
+    gradient: 'from-emerald-500/20',
   },
   {
     id: 'yellow',
@@ -42,9 +43,9 @@ const ZONES: ZoneData[] = [
     price: 'Бесплатно от 3000₽',
     description: 'Центр, Луговая, Спортивная, Эгершельд, Гоголя.',
     distanceLimit: 8,
-    color: 'text-amber-400',
-    glowColor: 'shadow-amber-500/40 border-amber-500/50',
-    bgColor: 'group-hover:bg-amber-500/10'
+    themeColor: 'text-amber-400',
+    pillColor: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
+    gradient: 'from-amber-500/20',
   },
   {
     id: 'red',
@@ -53,13 +54,13 @@ const ZONES: ZoneData[] = [
     price: 'Бесплатно от 3000₽',
     description: 'Вторая речка, Баляева, Снеговая падь, Тихая, Патрокл.',
     distanceLimit: 15,
-    color: 'text-rose-400',
-    glowColor: 'shadow-rose-500/40 border-rose-500/50',
-    bgColor: 'group-hover:bg-rose-500/10'
+    themeColor: 'text-rose-400',
+    pillColor: 'bg-rose-500/10 text-rose-300 border-rose-500/20',
+    gradient: 'from-rose-500/20',
   }
 ];
 
-// Massively expanded list of Vladivostok streets
+// Massively expanded list of Vladivostok streets (Keep the original list logic)
 const VLADIVOSTOK_STREETS = [
   "1-я Морская ул", "1-я Поселковая ул", "1-я Промышленная ул", "100-летия Владивостока пр-кт", 
   "40 лет ВЛКСМ ул", "50 лет ВЛКСМ ул", "Абрекская ул", "Авроровская ул", "Адмирала Горшкова ул", 
@@ -151,7 +152,7 @@ export const DeliveryInfo: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setAddressInput(val);
-    setShowHouseHint(false); // Hide hint if user types
+    setShowHouseHint(false);
 
     if (val.length > 1) {
       const filtered = VLADIVOSTOK_STREETS.filter(street => 
@@ -164,13 +165,10 @@ export const DeliveryInfo: React.FC = () => {
   };
 
   const selectSuggestion = (street: string) => {
-    // Add space after street name to immediately allow house number entry
     const newVal = `${street} `; 
     setAddressInput(newVal);
     setSuggestions([]);
     setShowHouseHint(true);
-    
-    // Keep focus and cursor at end
     if (inputRef.current) {
         inputRef.current.focus();
     }
@@ -214,7 +212,6 @@ export const DeliveryInfo: React.FC = () => {
     e.preventDefault();
     if (!addressInput.trim()) return;
 
-    // Basic validation to check if it looks like just a street name without a number
     const hasNumber = /\d/.test(addressInput);
     if (!hasNumber) {
         setFeedback({ text: "Пожалуйста, укажите номер дома", type: 'neutral' });
@@ -234,9 +231,8 @@ export const DeliveryInfo: React.FC = () => {
         if (result.found) {
             setDetectedZone(result.zone);
             if (result.zone) {
-                // SUCCESS MESSAGE AS REQUESTED
                 setFeedback({ 
-                    text: `Отлично! Сюда возим. (${result.formattedAddress}, ~${result.distance} км)`, 
+                    text: `Мы доставляем сюда! (${result.formattedAddress}, ~${result.distance} км)`, 
                     type: 'success' 
                 });
             } else {
@@ -256,133 +252,134 @@ export const DeliveryInfo: React.FC = () => {
   };
 
   return (
-    <section className="py-20 relative z-10 overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 bg-slate-950">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950 to-slate-950"></div>
-        <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-fuchsia-500/5 rounded-full blur-3xl pointer-events-none"></div>
+    <section className="py-24 relative z-10 overflow-hidden bg-slate-950">
+      {/* Deep Background Elements */}
+      <div className="absolute inset-0">
+         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-900/10 rounded-full blur-[100px] opacity-40"></div>
+         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-fuchsia-900/10 rounded-full blur-[80px] opacity-30"></div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
         
-        {/* Header Section */}
-        <div className="text-center mb-16 relative">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-6 animate-fade-in">
-             <Car size={14} className="animate-bounce" /> Доставка по Владивостоку
-          </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>Зоны доставки</h2>
-          
-          {/* Elegant Search Bar */}
-          <div className="max-w-xl mx-auto relative group z-20 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-             <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-indigo-500 rounded-2xl opacity-30 group-hover:opacity-60 blur transition duration-500 animate-shine bg-[length:200%_auto]"></div>
-             <div className="relative glass rounded-xl p-2 flex items-center gap-2 bg-slate-900/80">
-                <Search className="text-slate-400 ml-3 group-focus-within:text-indigo-400 transition-colors" size={20} />
-                <form onSubmit={handleTextSearch} className="flex-1 relative">
-                  <input 
-                      ref={inputRef}
-                      type="text" 
-                      placeholder={showHouseHint ? "Введите номер дома..." : "Улица и номер дома (например: Светланская 33)"}
-                      className="bg-transparent border-none outline-none text-white w-full py-2 placeholder:text-slate-500"
-                      value={addressInput}
-                      onChange={handleInputChange}
-                      autoComplete="off"
-                  />
-                  {showHouseHint && (
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 text-xs text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded animate-pulse pointer-events-none">
-                          <Home size={10} className="inline mr-1"/>
-                          № дома?
-                      </div>
-                  )}
-                </form>
-                <button 
-                  type="button"
-                  onClick={handleGeoCheck}
-                  disabled={isSearching}
-                  className="p-2.5 hover:bg-white/10 text-indigo-400 rounded-lg transition hover:scale-105 active:scale-95 disabled:opacity-50"
-                  title="Найти меня"
-                >
-                  <Navigation size={20} className={isSearching ? 'animate-spin' : ''} />
-                </button>
-             </div>
-
-             {/* Auto-complete Dropdown */}
-             {suggestions.length > 0 && (
-                <div className="absolute top-full left-0 w-full mt-2 bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 backdrop-blur-md animate-in slide-in-from-top-2">
-                   {suggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        onClick={() => selectSuggestion(suggestion)}
-                        className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-indigo-500/20 border-b border-white/5 last:border-0 transition-colors flex items-center gap-2 group/item"
-                      >
-                         <MapPin size={14} className="text-indigo-400 group-hover/item:scale-110 transition-transform" />
-                         {suggestion}
-                      </button>
-                   ))}
+        {/* Header and Search */}
+        <div className="flex flex-col lg:flex-row items-end justify-between gap-8 mb-16">
+            <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-4">
+                  <Car size={14} /> Карта доставки
                 </div>
-             )}
-             
-             {/* Feedback Toast */}
-             {feedback && (
-               <div className={`absolute -bottom-20 left-0 w-full flex justify-center animate-in slide-in-from-top-2 z-0`}>
-                  <div className={`px-5 py-3 rounded-xl text-sm font-bold shadow-2xl flex items-center gap-2 backdrop-blur-xl border ${
-                      feedback.type === 'success' ? 'bg-green-500/20 text-green-300 border-green-500/40 shadow-green-500/10' : 
-                      feedback.type === 'error' ? 'bg-red-500/20 text-red-300 border-red-500/40 shadow-red-500/10' :
-                      'bg-indigo-500/20 text-indigo-200 border-indigo-500/40'
-                  }`}>
-                      {feedback.type === 'error' && <AlertCircle size={16} />}
-                      {feedback.type === 'success' && <CheckCircle2 size={16} />}
-                      {feedback.type === 'neutral' && <Home size={16} />}
-                      {feedback.text}
-                  </div>
+                <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                  Зоны доставки
+                </h2>
+                <p className="text-slate-400 text-lg">
+                  Проверьте свой адрес, чтобы узнать время доставки и условия.
+                </p>
+            </div>
+
+            {/* Compact Glass Search */}
+            <div className="w-full lg:w-auto relative z-30">
+               <div className="relative group min-w-[320px] lg:w-[400px]">
+                 <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-xl opacity-30 group-hover:opacity-60 blur transition duration-300"></div>
+                 <div className="relative bg-slate-900 border border-white/10 rounded-xl flex items-center shadow-2xl">
+                    <Search className="text-slate-500 ml-4 shrink-0" size={18} />
+                    <form onSubmit={handleTextSearch} className="flex-1">
+                      <input 
+                          ref={inputRef}
+                          type="text" 
+                          placeholder="Введите улицу и дом..."
+                          className="bg-transparent border-none outline-none text-white w-full px-3 py-3.5 text-sm placeholder:text-slate-500"
+                          value={addressInput}
+                          onChange={handleInputChange}
+                          autoComplete="off"
+                      />
+                    </form>
+                    <button 
+                      onClick={handleGeoCheck}
+                      disabled={isSearching}
+                      className="p-3 hover:bg-white/5 text-indigo-400 rounded-r-xl transition-colors"
+                      title="Найти меня"
+                    >
+                      <Navigation size={18} className={isSearching ? 'animate-spin' : ''} />
+                    </button>
+                 </div>
+
+                 {/* Dropdown */}
+                 {suggestions.length > 0 && (
+                    <div className="absolute top-full left-0 w-full mt-2 bg-slate-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2">
+                       {suggestions.map((suggestion, index) => (
+                          <button
+                            key={index}
+                            onClick={() => selectSuggestion(suggestion)}
+                            className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-white/5 border-b border-white/5 last:border-0 transition-colors flex items-center gap-2"
+                          >
+                             <MapPin size={14} className="text-indigo-400" />
+                             {suggestion}
+                          </button>
+                       ))}
+                    </div>
+                 )}
                </div>
-             )}
-          </div>
+
+               {/* Status Message */}
+               {feedback && (
+                  <div className={`mt-3 flex items-start gap-2 text-sm p-3 rounded-lg border ${
+                      feedback.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 
+                      feedback.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-300' :
+                      'bg-slate-800 border-slate-700 text-slate-300'
+                  }`}>
+                      <div className="mt-0.5 shrink-0">
+                        {feedback.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                      </div>
+                      <span className="leading-snug">{feedback.text}</span>
+                  </div>
+               )}
+            </div>
         </div>
 
-        {/* Zones Grid */}
+        {/* Zones Grid - Stylish Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-          {ZONES.map((zone, idx) => {
+          {ZONES.map((zone) => {
              const isActive = detectedZone === zone.id;
              return (
                <div 
                  key={zone.id}
-                 className={`group relative overflow-hidden rounded-[2rem] p-8 border transition-all duration-500 h-full flex flex-col hover:-translate-y-2 hover:shadow-2xl animate-fade-in ${
+                 className={`group relative flex flex-col h-full bg-[#0B1121] border rounded-[2rem] overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${
                    isActive 
-                     ? `bg-slate-900/90 ${zone.glowColor} scale-105 z-10 ring-1 ring-white/10` 
-                     : 'bg-slate-900/40 border-white/5 hover:border-white/10'
+                    ? 'border-indigo-500/50 shadow-[0_0_30px_rgba(99,102,241,0.15)] scale-[1.02] z-10' 
+                    : 'border-white/5 hover:border-white/10 shadow-lg'
                  }`}
-                 style={{ animationDelay: `${0.3 + idx * 0.1}s` }}
                >
-                 {/* Internal Ambient Glow */}
-                 <div className={`absolute -right-20 -top-20 w-64 h-64 rounded-full blur-[80px] transition-all duration-700 opacity-0 group-hover:opacity-100 ${zone.bgColor.replace('group-hover:bg-', 'bg-')}`}></div>
+                 {/* Top Gradient */}
+                 <div className={`absolute top-0 left-0 w-full h-32 bg-gradient-to-b ${zone.gradient} to-transparent opacity-30 group-hover:opacity-50 transition-opacity`}></div>
                  
-                 {/* Active status Indicator */}
-                 <div className={`absolute top-6 right-6 transition-all duration-500 transform ${isActive ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}>
-                    <div className="bg-white text-slate-900 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                       <CheckCircle2 size={12} className="text-green-600" /> Ваш адрес
+                 {/* Active Badge */}
+                 {isActive && (
+                    <div className="absolute top-4 right-4 bg-indigo-500 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full shadow-lg z-20 flex items-center gap-1">
+                       <MapPin size={10} fill="currentColor" /> Ваш адрес
                     </div>
-                 </div>
+                 )}
 
-                 <div className="relative z-10 mb-6">
-                    <h3 className={`text-2xl font-bold mb-2 transition-colors duration-300 ${zone.color} group-hover:text-white`}>
+                 <div className="p-8 flex flex-col flex-1 relative z-10">
+                    <h3 className={`text-2xl font-bold mb-4 ${zone.themeColor}`}>
                       {zone.title}
                     </h3>
-                    <div className="flex items-center gap-2 text-slate-300 text-sm font-medium bg-white/5 w-fit px-3 py-1 rounded-full border border-white/5">
-                       <Clock size={14} className="group-hover:rotate-[360deg] transition-transform duration-700" /> {zone.time}
+                    
+                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium w-fit mb-6 ${zone.pillColor}`}>
+                       <Clock size={16} />
+                       {zone.time}
                     </div>
-                 </div>
 
-                 <p className="relative z-10 text-slate-400 text-sm leading-relaxed mb-8 flex-1 group-hover:text-slate-200 transition-colors">
-                    {zone.description}
-                 </p>
+                    <p className="text-slate-400 leading-relaxed mb-8 flex-1 text-[15px]">
+                       {zone.description}
+                    </p>
 
-                 <div className="relative z-10 pt-6 border-t border-white/5 group-hover:border-white/10 transition-colors">
-                    <div className="flex items-center justify-between">
+                    <div className="pt-6 border-t border-white/5 flex items-center justify-between group-hover:border-white/10 transition-colors">
                        <div className="flex items-center gap-2 text-white font-bold text-sm">
-                          <Wallet size={18} className="text-indigo-400 group-hover:scale-110 transition-transform" /> 
+                          <Wallet size={18} className={zone.themeColor} />
                           {zone.price}
                        </div>
-                       <ChevronRight size={16} className={`text-slate-500 transition-transform duration-300 ${isActive ? 'translate-x-1 text-white' : 'group-hover:translate-x-1 group-hover:text-white'}`} />
+                       <div className={`w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 group-hover:bg-white/10 group-hover:text-white transition-all`}>
+                          <ChevronRight size={16} />
+                       </div>
                     </div>
                  </div>
                </div>
@@ -390,37 +387,30 @@ export const DeliveryInfo: React.FC = () => {
           })}
         </div>
 
-        {/* Footer Info / Payment */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in" style={{ animationDelay: '0.6s' }}>
+        {/* Footer Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
            {/* Schedule */}
-           <div className="group glass rounded-[2rem] p-8 flex items-center gap-6 border border-white/5 hover:bg-white/5 transition-all duration-500 hover:scale-[1.01]">
-              <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 border border-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]">
-                 <Clock size={32} />
+           <div className="bg-[#0B1121] border border-white/5 rounded-2xl p-6 flex items-start gap-5">
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0 border border-indigo-500/20">
+                 <Clock size={24} />
               </div>
               <div>
-                 <h4 className="text-xl text-white font-bold mb-2 group-hover:text-indigo-200 transition-colors">Режим работы</h4>
-                 <p className="text-slate-300 text-sm mb-1">Заказы на сайте: <span className="text-white font-bold">Круглосуточно</span></p>
-                 <p className="text-slate-400 text-sm mb-2">Звонки и поддержка: 08:00 - 16:00</p>
-                 <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Доставка обедов по графику</p>
-                 </div>
+                 <h4 className="text-white font-bold mb-1">Режим работы</h4>
+                 <p className="text-slate-400 text-sm mb-2">Заказы на сайте круглосуточно. Операторы с 08:00 до 16:00.</p>
               </div>
            </div>
 
-           {/* Payment Methods */}
-           <div className="group glass rounded-[2rem] p-8 flex items-center gap-6 border border-white/5 hover:bg-white/5 transition-all duration-500 hover:scale-[1.01]">
-              <div className="w-16 h-16 rounded-2xl bg-fuchsia-500/20 flex items-center justify-center text-fuchsia-400 shrink-0 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500 border border-fuchsia-500/20 shadow-[0_0_20px_rgba(232,121,249,0.15)]">
-                 <Banknote size={32} />
+           {/* Payment */}
+           <div className="bg-[#0B1121] border border-white/5 rounded-2xl p-6 flex items-start gap-5">
+              <div className="w-12 h-12 rounded-xl bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-400 shrink-0 border border-fuchsia-500/20">
+                 <Banknote size={24} />
               </div>
               <div>
-                 <h4 className="text-xl text-white font-bold mb-2 group-hover:text-fuchsia-200 transition-colors">Способы оплаты</h4>
-                 <div className="flex flex-wrap gap-2">
-                    {['Картой', 'Наличными', 'Счет для юр.лиц'].map((method, i) => (
-                       <span key={i} className="px-3 py-1 bg-white/5 rounded-lg text-xs font-medium text-slate-300 border border-white/5 group-hover:border-white/20 transition-colors">
-                          {method}
-                       </span>
-                    ))}
+                 <h4 className="text-white font-bold mb-1">Оплата</h4>
+                 <div className="flex flex-wrap gap-2 text-xs text-slate-400">
+                    <span className="px-2 py-1 bg-white/5 rounded border border-white/5">Картой</span>
+                    <span className="px-2 py-1 bg-white/5 rounded border border-white/5">Наличными</span>
+                    <span className="px-2 py-1 bg-white/5 rounded border border-white/5">Счет для юр.лиц</span>
                  </div>
               </div>
            </div>
