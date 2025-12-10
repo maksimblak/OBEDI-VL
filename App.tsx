@@ -13,7 +13,6 @@ import {
   Leaf,
   ChevronDown,
   Check,
-  Instagram,
   Send,
   MapPin,
   Phone,
@@ -578,14 +577,6 @@ export default function App() {
                  <p className="text-slate-400 text-sm leading-relaxed">
                    Вкусная и здоровая еда с доставкой в офис и домой. Готовим с любовью, доставляем вовремя.
                  </p>
-                 <div className="flex gap-4">
-                    <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-indigo-600 hover:text-white transition-all border border-white/5">
-                       <Instagram size={18} />
-                    </a>
-                    <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-blue-500 hover:text-white transition-all border border-white/5">
-                       <Send size={18} />
-                    </a>
-                 </div>
               </div>
 
               {/* Col 2: Navigation (New) */}
