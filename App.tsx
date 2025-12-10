@@ -686,7 +686,10 @@ export default function App() {
         }}
       />
 
-      <AIChef />
+      <AIChef 
+        menuItems={menuItems}
+        onAddToCart={addToCart}
+      />
 
       {modalItem && (
         <ProductModal 
