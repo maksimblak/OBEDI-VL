@@ -653,9 +653,7 @@ export default function App() {
                          className="w-10 h-10 rounded-full bg-[#0088cc]/20 flex items-center justify-center text-[#0088cc] border border-[#0088cc]/30 hover:bg-[#0088cc] hover:text-white transition-all duration-300"
                          title="Написать в Telegram"
                        >
-                         <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 ml-[-2px]">
-                            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.628 0zm6.54 8.521l-2.604 12.238c-.19.863-.706 1.076-1.432.669l-3.956-2.916-1.91 1.837c-.21.21-.387.385-.793.385l.284-4.025 7.33-6.623c.319-.283-.07-.44-.495-.158L7.876 14.39 3.975 13.17c-.85-.265-.867-.852.177-1.261l15.197-5.854c.704-.265 1.32.179 1.135 2.466z" />
-                         </svg>
+                         <Send size={20} className="ml-[-2px]" />
                        </a>
                     </li>
                  </ul>
