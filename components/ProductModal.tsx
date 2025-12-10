@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { X, ShoppingBag, Flame, Zap, Droplet, Wheat } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, ShoppingBag, Flame, Zap, Droplet, Wheat, Check } from 'lucide-react';
 import { MenuItem } from '../types';
 import { FALLBACK_IMAGE } from '../data';
 
@@ -11,7 +10,19 @@ interface ProductModalProps {
 }
 
 export const ProductModal: React.FC<ProductModalProps> = ({ item, onClose, onAddToCart }) => {
+  const [isAdded, setIsAdded] = useState(false);
+
   if (!item) return null;
+
+  const handleAddToCart = () => {
+    onAddToCart(item);
+    setIsAdded(true);
+    // Short delay before closing to show the success state
+    setTimeout(() => {
+        setIsAdded(false);
+        onClose();
+    }, 600);
+  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -92,11 +103,25 @@ export const ProductModal: React.FC<ProductModalProps> = ({ item, onClose, onAdd
               {item.price} ₽
             </div>
             <button 
-              onClick={() => { onAddToCart(item); onClose(); }}
-              className="w-full btn-shine animate-shine bg-[length:200%_auto] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg shadow-indigo-500/20"
+              onClick={handleAddToCart}
+              disabled={isAdded}
+              className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 shadow-lg ${
+                isAdded 
+                ? 'bg-emerald-500 text-white scale-105 shadow-emerald-500/20' 
+                : 'btn-shine animate-shine bg-[length:200%_auto] text-white hover:scale-[1.02] active:scale-[0.98] shadow-indigo-500/20'
+              }`}
             >
-              <ShoppingBag size={20} />
-              В корзину
+              {isAdded ? (
+                <>
+                  <Check size={20} className="animate-in zoom-in duration-300" />
+                  <span>Добавлено</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag size={20} />
+                  <span>В корзину</span>
+                </>
+              )}
             </button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { Plus, Play, Calendar } from 'lucide-react';
+import { Plus, Play, Calendar, Check } from 'lucide-react';
 import { MenuItem, Category } from '../types';
 import { FALLBACK_IMAGE } from '../data';
 
@@ -195,6 +195,7 @@ const MenuItemCard: React.FC<{
 }> = ({ item, onAddToCart, onOpenModal }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
 
   const handleMouseEnter = () => {
     if (item.video && videoRef.current) {
@@ -210,6 +211,13 @@ const MenuItemCard: React.FC<{
       videoRef.current.pause();
       setIsPlaying(false);
     }
+  };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onAddToCart(item);
+    setIsAdded(true);
+    setTimeout(() => setIsAdded(false), 800);
   };
 
   return (
@@ -264,10 +272,18 @@ const MenuItemCard: React.FC<{
 
            {/* Add Button Overlay */}
           <button 
-            onClick={(e) => { e.stopPropagation(); onAddToCart(item); }}
-            className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/40 transform translate-y-14 group-hover:translate-y-0 transition-all duration-300 hover:scale-110 active:scale-95"
+            onClick={handleAddToCart}
+            className={`absolute bottom-4 right-4 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transform translate-y-14 group-hover:translate-y-0 transition-all duration-300 ${
+              isAdded 
+                ? 'bg-emerald-500 text-white scale-110 shadow-emerald-500/50' 
+                : 'bg-indigo-600 text-white shadow-indigo-600/40 hover:scale-110 active:scale-95'
+            }`}
           >
-             <Plus size={20} />
+             {isAdded ? (
+               <Check size={20} className="animate-in zoom-in spin-in-90 duration-300" />
+             ) : (
+               <Plus size={20} />
+             )}
           </button>
         </div>
         
