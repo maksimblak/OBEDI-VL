@@ -26,6 +26,7 @@ import { AIChef } from './components/AIChef';
 import { ProductModal } from './components/ProductModal';
 import { LunchConstructor } from './components/LunchConstructor';
 import { HowItWorks } from './components/HowItWorks';
+import { CorporateOffer } from './components/CorporateOffer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { AuthModal } from './components/AuthModal';
 import { UserProfile } from './components/UserProfile';
@@ -487,6 +488,9 @@ export default function App() {
 
       {/* HOW IT WORKS */}
       <HowItWorks />
+
+      {/* CORPORATE OFFER (NEW) */}
+      <CorporateOffer />
 
       {/* NEW FEATURES SECTION (Styled like user requested) */}
       <section className="py-24 relative z-10 overflow-hidden bg-gradient-to-b from-slate-950 to-slate-900">
