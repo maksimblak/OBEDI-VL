@@ -17,7 +17,9 @@ import {
   Send,
   MapPin,
   Phone,
-  Clock
+  Clock,
+  ArrowRight,
+  Mail
 } from 'lucide-react';
 import { MenuSection } from './components/MenuSection';
 import { CartSidebar } from './components/CartSidebar';
@@ -31,6 +33,7 @@ import { UserProfile } from './components/UserProfile';
 import { DeliveryInfo } from './components/DeliveryInfo';
 import { Logo } from './components/Logo';
 import { LegalModals } from './components/LegalModals';
+import { FAQModal } from './components/FAQModal';
 import { MenuItem, CartItem, Category, Order, User } from './types';
 import { historyService } from './services/historyService';
 import { authService } from './services/authService';
@@ -51,6 +54,7 @@ export default function App() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isFAQOpen, setIsFAQOpen] = useState(false);
   const [legalModal, setLegalModal] = useState<'privacy' | 'terms' | null>(null);
   
   // Mobile Menu State
@@ -562,35 +566,52 @@ export default function App() {
       </div>
 
       {/* FOOTER */}
-      <footer className="bg-slate-950 pt-20 pb-10 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-4 md:px-8">
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
-              <div className="col-span-1">
-                 <Logo className="mb-6" variant="footer" />
-                 <p className="text-slate-500 text-sm mb-6">
-                   Сервис доставки правильного питания для офисов и дома во Владивостоке.
+      <footer className="relative bg-slate-950 pt-24 pb-12 overflow-hidden border-t border-white/5 font-sans">
+         {/* Top Gradient Line */}
+         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
+         
+         <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
+              {/* Col 1: Brand */}
+              <div className="space-y-6">
+                 <Logo variant="footer" />
+                 <p className="text-slate-400 text-sm leading-relaxed">
+                   Вкусная и здоровая еда с доставкой в офис и домой. Готовим с любовью, доставляем вовремя.
                  </p>
                  <div className="flex gap-4">
-                    <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-indigo-600 hover:text-white transition-all">
+                    <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-indigo-600 hover:text-white transition-all border border-white/5">
                        <Instagram size={18} />
                     </a>
-                    <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-blue-500 hover:text-white transition-all">
+                    <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-blue-500 hover:text-white transition-all border border-white/5">
                        <Send size={18} />
                     </a>
                  </div>
               </div>
-              
+
+              {/* Col 2: Navigation (New) */}
               <div>
-                 <h4 className="text-white font-bold mb-6">Помощь</h4>
-                 <ul className="space-y-3 text-sm text-slate-400">
-                    <li><button onClick={() => scrollToSection('delivery-info')} className="hover:text-indigo-400 transition">Доставка и оплата</button></li>
-                    <li><button onClick={() => {}} className="hover:text-indigo-400 transition">Вопросы и ответы</button></li>
-                    <li><button onClick={() => {}} className="hover:text-indigo-400 transition">Юридическим лицам</button></li>
+                  <h4 className="text-white font-bold mb-6 text-lg">Меню</h4>
+                  <ul className="space-y-4 text-sm text-slate-400">
+                      <li><button onClick={() => scrollToSection('featured-sets')} className="hover:text-indigo-400 transition flex items-center gap-2">🔥 Популярное</button></li>
+                      <li><button onClick={() => scrollToSection('menu-start')} className="hover:text-indigo-400 transition">🥗 Основное меню</button></li>
+                      <li><button onClick={() => setIsConstructorOpen(true)} className="hover:text-indigo-400 transition">🛠 Конструктор</button></li>
+                  </ul>
+              </div>
+              
+              {/* Col 3: Help */}
+              <div>
+                 <h4 className="text-white font-bold mb-6 text-lg">Помощь</h4>
+                 <ul className="space-y-4 text-sm text-slate-400">
+                    <li><button onClick={() => scrollToSection('delivery-info')} className="hover:text-indigo-400 transition">Доставка и зоны</button></li>
+                    <li><button onClick={() => setIsFAQOpen(true)} className="hover:text-indigo-400 transition">Вопросы и ответы</button></li>
+                    <li><button onClick={() => setLegalModal('privacy')} className="hover:text-indigo-400 transition">Политика конфиденциальности</button></li>
+                    <li><button onClick={() => setLegalModal('terms')} className="hover:text-indigo-400 transition">Пользовательское соглашение</button></li>
                  </ul>
               </div>
 
+              {/* Col 4: Contacts */}
               <div>
-                 <h4 className="text-white font-bold mb-6">Контакты</h4>
+                 <h4 className="text-white font-bold mb-6 text-lg">Контакты</h4>
                  <ul className="space-y-4 text-sm text-slate-400">
                     <li className="flex items-start gap-3">
                        <MapPin size={18} className="text-indigo-500 shrink-0 mt-0.5" />
@@ -598,7 +619,11 @@ export default function App() {
                     </li>
                     <li className="flex items-center gap-3">
                        <Phone size={18} className="text-indigo-500 shrink-0" />
-                       <span>+7 (423) 200-00-00</span>
+                       <a href="tel:+79025562853" className="hover:text-white transition">+7 (902) 556-28-53</a>
+                    </li>
+                    <li className="flex items-center gap-3">
+                       <Mail size={18} className="text-indigo-500 shrink-0" />
+                       <a href="mailto:obedi-vl@mail.ru" className="hover:text-white transition">obedi-vl@mail.ru</a>
                     </li>
                     <li className="flex items-center gap-3">
                        <Clock size={18} className="text-indigo-500 shrink-0" />
@@ -612,10 +637,10 @@ export default function App() {
               <div>© 2024 Obedi VL. Все права защищены.</div>
               <div className="flex gap-6">
                  <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-400 transition">
-                   Политика конфиденциальности
+                   Privacy Policy
                  </button>
                  <button onClick={() => setLegalModal('terms')} className="hover:text-slate-400 transition">
-                   Пользовательское соглашение
+                   Terms of Service
                  </button>
               </div>
            </div>
@@ -680,6 +705,11 @@ export default function App() {
           type={legalModal}
           onClose={() => setLegalModal(null)}
         />
+      )}
+
+      {/* FAQ Modal */}
+      {isFAQOpen && (
+        <FAQModal onClose={() => setIsFAQOpen(false)} />
       )}
 
       <AIChef menuItems={menuItems} onAddToCart={addToCart} />
