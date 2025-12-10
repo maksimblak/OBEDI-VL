@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { MapPin, Clock, Wallet, Banknote, Car, Navigation, Search, CheckCircle2, ChevronRight } from 'lucide-react';
+import { MapPin, Clock, Wallet, Banknote, Car, Navigation, Search, CheckCircle2, ChevronRight, AlertCircle } from 'lucide-react';
+import { checkAddressZone } from '../services/geminiService';
 
 // Coordinates for Ulitsa Nadibaidze, 28, Vladivostok
 const RESTAURANT_COORDS = {
@@ -66,7 +67,7 @@ export const DeliveryInfo: React.FC = () => {
   const [addressInput, setAddressInput] = useState('');
   const [detectedZone, setDetectedZone] = useState<ZoneType>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'error' | 'neutral' } | null>(null);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; 
@@ -84,7 +85,7 @@ export const DeliveryInfo: React.FC = () => {
 
   const handleGeoCheck = () => {
     if (!navigator.geolocation) {
-      setFeedback("Геолокация недоступна");
+      setFeedback({ text: "Геолокация недоступна", type: 'error' });
       return;
     }
     setIsSearching(true);
@@ -101,17 +102,21 @@ export const DeliveryInfo: React.FC = () => {
         else if (dist <= ZONES[2].distanceLimit) zone = 'red';
         
         setDetectedZone(zone);
-        setFeedback(zone ? `Дистанция: ${dist.toFixed(1)} км` : `Вы далеко (${dist.toFixed(1)} км)`);
+        if (zone) {
+            setFeedback({ text: `Вы в зоне доставки (${dist.toFixed(1)} км)`, type: 'success' });
+        } else {
+            setFeedback({ text: `Вы слишком далеко (${dist.toFixed(1)} км)`, type: 'error' });
+        }
         setIsSearching(false);
       },
       () => {
         setIsSearching(false);
-        setFeedback("Ошибка определения");
+        setFeedback({ text: "Ошибка определения", type: 'error' });
       }
     );
   };
 
-  const handleTextSearch = (e: React.FormEvent) => {
+  const handleTextSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addressInput.trim()) return;
 
@@ -119,22 +124,30 @@ export const DeliveryInfo: React.FC = () => {
     setFeedback(null);
     setDetectedZone(null);
 
-    setTimeout(() => {
-        const lowerInput = addressInput.toLowerCase();
-        let foundZone: ZoneType = null;
-
-        for (const zone of ZONES) {
-            if (zone.streets.some(street => lowerInput.includes(street))) {
-                foundZone = zone.id;
-                break;
+    try {
+        const result = await checkAddressZone(addressInput);
+        
+        if (result.found) {
+            setDetectedZone(result.zone);
+            if (result.zone) {
+                setFeedback({ 
+                    text: `Нашли: ${result.formattedAddress} (~${result.distance} км)`, 
+                    type: 'success' 
+                });
+            } else {
+                setFeedback({ 
+                    text: `${result.formattedAddress} - слишком далеко (~${result.distance} км)`, 
+                    type: 'error' 
+                });
             }
+        } else {
+            setFeedback({ text: "Адрес не найден. Попробуйте уточнить.", type: 'error' });
         }
-        if (!foundZone && lowerInput.includes('владивосток')) foundZone = 'yellow';
-
-        setDetectedZone(foundZone);
-        setFeedback(foundZone ? "Адрес найден в зоне обслуживания" : "Адрес не найден в базе");
+    } catch (error) {
+        setFeedback({ text: "Ошибка сервиса карт", type: 'error' });
+    } finally {
         setIsSearching(false);
-    }, 600);
+    }
   };
 
   return (
@@ -171,15 +184,26 @@ export const DeliveryInfo: React.FC = () => {
                 <button 
                   type="button"
                   onClick={handleGeoCheck}
-                  className="p-2.5 hover:bg-white/10 text-indigo-400 rounded-lg transition hover:scale-105 active:scale-95"
+                  disabled={isSearching}
+                  className="p-2.5 hover:bg-white/10 text-indigo-400 rounded-lg transition hover:scale-105 active:scale-95 disabled:opacity-50"
                   title="Найти меня"
                 >
                   <Navigation size={20} className={isSearching ? 'animate-spin' : ''} />
                 </button>
              </div>
+             
+             {/* Feedback Toast */}
              {feedback && (
-               <div className={`absolute -bottom-10 left-0 w-full text-center text-sm font-bold animate-in slide-in-from-top-2 ${detectedZone ? 'text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]' : 'text-slate-400'}`}>
-                  {feedback}
+               <div className={`absolute -bottom-12 left-0 w-full flex justify-center animate-in slide-in-from-top-2`}>
+                  <div className={`px-4 py-2 rounded-lg text-sm font-bold shadow-lg flex items-center gap-2 ${
+                      feedback.type === 'success' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 
+                      feedback.type === 'error' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                      'bg-slate-800 text-slate-300'
+                  }`}>
+                      {feedback.type === 'error' && <AlertCircle size={14} />}
+                      {feedback.type === 'success' && <CheckCircle2 size={14} />}
+                      {feedback.text}
+                  </div>
                </div>
              )}
           </div>

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { MenuItem } from "../types";
 
@@ -48,5 +49,59 @@ export const getChefRecommendation = async (
   } catch (error) {
     console.error("Gemini API Error:", error);
     return "Мой электронный блокнот рецептов временно недоступен. Попробуйте выбрать что-то из меню!";
+  }
+};
+
+export const checkAddressZone = async (address: string): Promise<{
+  found: boolean;
+  zone: 'green' | 'yellow' | 'red' | null;
+  distance: number;
+  formattedAddress: string;
+}> => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Kitchen location: Ulitsa Nadibaidze 28, Vladivostok
+    const prompt = `
+      You are the logistics engine for "Obedi VL" in Vladivostok.
+      Our Kitchen is at: Ulitsa Nadibaidze 28, Vladivostok.
+
+      Delivery Zones (Driving Distance):
+      - Green Zone: 0 - 4 km
+      - Yellow Zone: 4 - 8 km
+      - Red Zone: 8 - 15 km
+      - No Delivery: > 15 km
+
+      User Address Input: "${address}"
+
+      Task:
+      1. Check if the address exists in Vladivostok.
+      2. Estimate the driving distance from the kitchen.
+      3. Determine the zone.
+      
+      Return strictly valid JSON:
+      {
+        "found": boolean,
+        "formattedAddress": string,
+        "distance": number, // km, one decimal place
+        "zone": "green" | "yellow" | "red" | null
+      }
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        temperature: 0.1
+      }
+    });
+
+    const text = response.text;
+    if (!text) return { found: false, zone: null, distance: 0, formattedAddress: '' };
+    
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("Zone check error:", e);
+    return { found: false, zone: null, distance: 0, formattedAddress: '' };
   }
 };
