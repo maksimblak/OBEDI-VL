@@ -107,12 +107,12 @@ export const CorporateOffer: React.FC<CorporateOfferProps> = ({ onRequestOffer }
               {/* Image Side */}
               <div className="lg:w-2/5 relative min-h-[300px] lg:min-h-full">
                  <img 
-                   src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1932&auto=format&fit=crop" 
+                   src="https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=2070&auto=format&fit=crop" 
                    alt="Corporate Catering" 
-                   className="absolute inset-0 w-full h-full object-cover grayscale-[30%] contrast-125"
+                   className="absolute inset-0 w-full h-full object-cover grayscale-[10%] contrast-110"
                  />
                  {/* Gradient Overlay */}
-                 <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-l from-slate-900 via-slate-900/80 to-transparent"></div>
+                 <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-l from-slate-900 via-slate-900/60 to-transparent"></div>
                  
                  {/* Decorative Circle */}
                  <div className="absolute bottom-10 right-10 w-32 h-32 border-2 border-white/20 rounded-full flex items-center justify-center animate-spin-slow hidden lg:flex">
