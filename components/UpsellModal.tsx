@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, Plus, Sparkles, Timer } from 'lucide-react';
+import { X, Plus, Sparkles, Flame, Percent, ArrowRight } from 'lucide-react';
 import { MenuItem } from '../types';
 import { FALLBACK_IMAGE } from '../data';
 
@@ -19,84 +19,118 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
   onAdd, 
   onSkip 
 }) => {
+  const savings = item.price - discountPrice;
+  const discountPercent = Math.round((savings / item.price) * 100);
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-md animate-fade-in"
+        className="absolute inset-0 bg-slate-950/80 backdrop-blur-md animate-fade-in"
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-sm bg-slate-900 border border-fuchsia-500/30 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(192,38,211,0.15)] flex flex-col animate-[blob_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]">
+      {/* Modal Card */}
+      <div className="relative w-full max-w-sm bg-[#0f172a] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-indigo-500/20 flex flex-col animate-[blob_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)] group">
         
-        {/* Header Image Area */}
-        <div className="h-40 relative">
-          <img 
-            src={item.image} 
-            alt={item.title}
-            onError={(e) => {
-               const target = e.target as HTMLImageElement;
-               target.src = FALLBACK_IMAGE;
-               target.onerror = null;
-            }}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
-          
-          <button 
-            onClick={onClose} 
-            className="absolute top-4 right-4 bg-black/40 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/20 transition"
-          >
-            <X size={18} />
-          </button>
+        {/* Background Ambient Glows */}
+        <div className="absolute -top-20 -left-20 w-64 h-64 bg-fuchsia-500/20 rounded-full blur-[80px] pointer-events-none mix-blend-screen"></div>
+        <div className="absolute top-1/2 -right-20 w-64 h-64 bg-indigo-500/20 rounded-full blur-[80px] pointer-events-none mix-blend-screen"></div>
 
-          <div className="absolute top-4 left-4 bg-fuchsia-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 animate-pulse">
-            <Sparkles size={12} />
-            Специальное предложение
-          </div>
+        {/* Close Button */}
+        <button 
+            onClick={onClose} 
+            className="absolute top-5 right-5 z-20 bg-black/20 hover:bg-white/10 text-white/50 hover:text-white p-2.5 rounded-full transition-all backdrop-blur-md"
+        >
+            <X size={20} />
+        </button>
+
+        {/* Header Image */}
+        <div className="relative h-64 w-full">
+            <img 
+                src={item.image} 
+                alt={item.title}
+                onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = FALLBACK_IMAGE;
+                    target.onerror = null;
+                }}
+                className="w-full h-full object-cover" 
+            />
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-[#0f172a]/20 to-transparent"></div>
+
+            {/* Floating Tag */}
+            <div className="absolute top-6 left-6 animate-float" style={{ animationDuration: '4s' }}>
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 text-white px-3 py-1.5 rounded-full flex items-center gap-2 shadow-xl">
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-fuchsia-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-fuchsia-500"></span>
+                    </span>
+                    <span className="text-xs font-bold tracking-wide uppercase">Рекомендуем</span>
+                </div>
+            </div>
+
+            {/* Giant Discount Badge */}
+            <div className="absolute bottom-6 right-6 rotate-[-6deg] group-hover:rotate-0 transition-transform duration-500">
+                <div className="bg-gradient-to-br from-rose-500 to-orange-500 text-white font-black text-2xl px-5 py-3 rounded-2xl shadow-lg shadow-rose-500/40 flex items-center gap-1 border border-white/10">
+                    -{discountPercent}%
+                </div>
+            </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 pt-2 text-center relative z-10">
-          <h3 className="text-xl font-bold text-white mb-2 leading-tight">
-            Идеальное дополнение!
-          </h3>
-          <p className="text-slate-400 text-sm mb-6">
-            Кажется, вы забыли напиток. Добавим <span className="text-fuchsia-300 font-medium">{item.title}</span> к вашему обеду по супер-цене?
-          </p>
+        {/* Content Body */}
+        <div className="px-8 pb-8 -mt-4 relative z-10 text-center">
+            
+            <h3 className="text-2xl font-bold text-white mb-2 leading-tight">
+                Забыли напиток?
+            </h3>
+            <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+                Идеально дополнит ваш обед. <br/>
+                Добавьте <span className="text-indigo-300 font-medium">{item.title}</span> со скидкой!
+            </p>
 
-          <div className="bg-white/5 border border-white/5 rounded-xl p-4 mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-               <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-2xl">🥤</div>
-               <div className="text-left">
-                  <div className="text-xs text-slate-500 line-through">{item.price} ₽</div>
-                  <div className="text-lg font-bold text-white leading-none">{discountPrice} ₽</div>
+            {/* Pricing Card */}
+            <div className="bg-white/5 border border-white/5 rounded-2xl p-1 mb-8">
+               <div className="bg-[#0f172a]/50 rounded-xl p-4 flex items-center justify-between relative overflow-hidden">
+                  {/* Shimmer effect inside price card */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+
+                  <div className="text-left">
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-1">Обычная цена</div>
+                      <div className="text-sm text-slate-400 line-through decoration-slate-500 decoration-1">{item.price} ₽</div>
+                  </div>
+
+                  <div className="h-8 w-px bg-white/10"></div>
+
+                  <div className="text-right">
+                      <div className="text-[10px] text-emerald-400 uppercase tracking-wider font-bold mb-1 flex items-center justify-end gap-1">
+                          <Flame size={10} className="fill-emerald-400" /> Выгода {savings}₽
+                      </div>
+                      <div className="text-3xl font-black text-white leading-none tracking-tight">{discountPrice} ₽</div>
+                  </div>
                </div>
             </div>
-            <div className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 font-bold">
-               Выгода {item.price - discountPrice} ₽
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+                <button 
+                    onClick={onAdd}
+                    className="w-full py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 hover:from-indigo-500 hover:via-purple-500 hover:to-fuchsia-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-[0.98] group/btn relative overflow-hidden"
+                >
+                    <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.3)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] bg-[position:-100%_0,0_0] bg-no-repeat transition-[background-position_0s] duration-0 group-hover/btn:bg-[position:200%_0,0_0] group-hover/btn:duration-[1500ms]"></div>
+                    <Plus size={20} strokeWidth={3} /> 
+                    <span>Добавить в заказ</span>
+                </button>
+                
+                <button 
+                    onClick={onSkip}
+                    className="group/skip w-full py-2 flex items-center justify-center gap-1 text-slate-500 text-xs font-medium hover:text-white transition-colors"
+                >
+                    Нет, спасибо, перейти к оплате
+                    <ArrowRight size={12} className="opacity-0 -translate-x-2 group-hover/skip:opacity-100 group-hover/skip:translate-x-0 transition-all" />
+                </button>
             </div>
-          </div>
-
-          <div className="space-y-3">
-            <button 
-              onClick={onAdd}
-              className="w-full py-3.5 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-fuchsia-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95"
-            >
-              <Plus size={18} /> Добавить за {discountPrice} ₽
-            </button>
-            <button 
-              onClick={onSkip}
-              className="w-full py-3 text-slate-500 text-sm font-medium hover:text-white transition"
-            >
-              Нет, спасибо, перейти к оплате
-            </button>
-          </div>
-        </div>
-
-        {/* Timer Bar (Visual Urgency) */}
-        <div className="h-1 bg-slate-800 w-full">
-            <div className="h-full bg-fuchsia-500 w-full animate-[marquee_10s_linear_forwards]" style={{ width: '100%' }}></div>
         </div>
       </div>
     </div>
