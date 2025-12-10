@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Sparkles, Plus, ChefHat } from 'lucide-react';
+import { MessageCircle, X, Send, Plus, ChefHat } from 'lucide-react';
 import { getChefRecommendation } from '../services/geminiService';
 import { ChatMessage, MenuItem } from '../types';
 import { FALLBACK_IMAGE } from '../data';
@@ -205,7 +205,6 @@ export const AIChef: React.FC<AIChefProps> = ({ menuItems, onAddToCart }) => {
                 <X size={28} className="text-white relative z-10" />
             ) : (
                 <div className="relative z-10 flex items-center justify-center">
-                    <Sparkles size={24} className="text-fuchsia-300 absolute -top-2 -right-2 animate-bounce" style={{ animationDuration: '2s' }} />
                     <ChefHat size={28} className="text-white" />
                 </div>
             )}
