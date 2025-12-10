@@ -1,11 +1,29 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShoppingBag, Menu as MenuIcon, X, Zap, Settings2, RotateCcw, LogIn, Utensils, Star, Clock, ChevronDown, ChevronUp, MapPin, Phone, Instagram, Send, Check, Thermometer, Leaf, Award } from 'lucide-react';
+import { 
+  ShoppingBag, 
+  Menu as MenuIcon, 
+  X, 
+  Zap, 
+  Settings2, 
+  RotateCcw, 
+  LogIn, 
+  Utensils, 
+  Star, 
+  Leaf,
+  ChevronDown,
+  Check,
+  Instagram,
+  Send,
+  MapPin,
+  Phone,
+  Clock
+} from 'lucide-react';
 import { MenuSection } from './components/MenuSection';
 import { CartSidebar } from './components/CartSidebar';
 import { AIChef } from './components/AIChef';
 import { ProductModal } from './components/ProductModal';
 import { LunchConstructor } from './components/LunchConstructor';
+import { HowItWorks } from './components/HowItWorks';
 import { CheckoutModal } from './components/CheckoutModal';
 import { AuthModal } from './components/AuthModal';
 import { UserProfile } from './components/UserProfile';
@@ -15,7 +33,7 @@ import { MenuItem, CartItem, Category, Order, User } from './types';
 import { historyService } from './services/historyService';
 import { authService } from './services/authService';
 import { evotorService } from './services/evotorService';
-import { MOCK_MENU, IMAGES, REVIEWS, FAQ } from './data';
+import { MOCK_MENU, IMAGES } from './data';
 
 export default function App() {
   const [activeCategory, setActiveCategory] = useState<Category>('lunch');
@@ -36,7 +54,6 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const [isScrolled, setIsScrolled] = useState(false);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [modalItem, setModalItem] = useState<MenuItem | null>(null);
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   
@@ -63,7 +80,6 @@ export default function App() {
        if (evotorItems.length > 0) {
          setMenuItems(evotorItems);
        }
-       // If evotor returns empty (no keys configured), we stick with MOCK_MENU
        setIsMenuLoading(false);
     };
     
@@ -130,7 +146,6 @@ export default function App() {
     const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     historyService.saveOrder(cart, total, user?.id);
     
-    // Optimistically update lastOrder for the UI before clearing cart
     const tempCart = [...cart];
     
     setLastOrder({
@@ -152,7 +167,6 @@ export default function App() {
 
   const handleLoginSuccess = (loggedInUser: User) => {
       setUser(loggedInUser);
-      // Refresh last order for this user
       const last = historyService.getLastOrder(loggedInUser.id);
       if (last) setLastOrder(last);
   };
@@ -166,7 +180,7 @@ export default function App() {
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const scrollToSection = (id: string) => {
-    setIsMobileMenuOpen(false); // Close mobile menu if open
+    setIsMobileMenuOpen(false);
     const el = document.getElementById(id);
     if (el) {
       const offset = 90;
@@ -176,7 +190,6 @@ export default function App() {
     }
   };
 
-  // Helper to create set for "Featured Sets"
   const createSet = (ids: string[]) => {
       return menuItems.filter(i => ids.includes(i.id));
   };
@@ -351,14 +364,15 @@ export default function App() {
             >
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-100 via-white to-indigo-100 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <Settings2 size={22} className="relative z-10 text-indigo-600" /> 
-              <span className="relative z-10">Собрать комплексный обед</span>
+              <span className="relative z-10">Собрать комплекс</span>
             </button>
+
             <button 
               onClick={() => scrollToSection('menu-start')} 
               className="px-10 py-5 glass border border-white/20 text-white rounded-2xl font-bold hover:bg-white/10 hover:border-white/40 transition-all active:scale-95 flex items-center justify-center gap-3 group text-lg"
             >
-              <Utensils size={22} className="text-fuchsia-400 group-hover:rotate-12 transition-transform" />
-              Выбрать из меню
+              <Utensils size={22} className="text-indigo-400 group-hover:rotate-12 transition-transform" />
+              Меню
             </button>
           </div>
           
@@ -465,6 +479,9 @@ export default function App() {
          </div>
       </section>
 
+      {/* HOW IT WORKS */}
+      <HowItWorks />
+
       {/* NEW FEATURES SECTION (Styled like user requested) */}
       <section className="py-24 relative z-10 overflow-hidden bg-gradient-to-b from-slate-950 to-slate-900">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
@@ -494,54 +511,34 @@ export default function App() {
                </div>
             </div>
 
-            {/* Text Side */}
-            <div className="w-full lg:w-1/2 space-y-12 order-1 lg:order-2">
-               <h2 className="text-3xl md:text-5xl font-bold text-white mb-8 leading-tight">
-                  Стандарты <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-fuchsia-400">качества</span>
-               </h2>
+            {/* Content Side */}
+            <div className="w-full lg:w-1/2 order-1 lg:order-2">
+              <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 leading-tight">
+                 Еда, которая <br/>
+                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-fuchsia-400">заряжает энергией</span>
+              </h2>
+              <p className="text-slate-300 text-lg mb-8 leading-relaxed">
+                 Мы не просто доставляем еду, мы заботимся о вашем здоровье и продуктивности. 
+                 Используем только фермерские продукты, минимизируем масло и сохраняем максимум витаминов.
+              </p>
+              
+              <ul className="space-y-4 mb-10">
+                 {['Без заморозки и полуфабрикатов', 'Экологичная упаковка', 'Обновление меню каждые 2 недели'].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-slate-200">
+                       <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
+                          <Check size={14} strokeWidth={3} />
+                       </div>
+                       {item}
+                    </li>
+                 ))}
+              </ul>
 
-               {/* Item 1 - CHANGED to Purple */}
-               <div className="flex gap-6 group">
-                  <div className="w-14 h-14 rounded-full bg-purple-600 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(147,51,234,0.4)] group-hover:scale-110 transition-transform duration-300">
-                     <Award size={28} className="text-white" />
-                  </div>
-                  <div>
-                     <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-purple-400 transition-colors">Качество на первом месте</h3>
-                     <ul className="space-y-2 text-slate-400 leading-relaxed">
-                        <li>— Мы работаем только с проверенными поставщиками</li>
-                        <li>— Используем натуральные продукты с сертификатами качества</li>
-                        <li>— Не добавляем консервантов и химических веществ</li>
-                        <li>— Готовим с любовью, как дома</li>
-                     </ul>
-                  </div>
-               </div>
-
-               {/* Item 2 - Kept Indigo */}
-               <div className="flex gap-6 group">
-                  <div className="w-14 h-14 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(99,102,241,0.4)] group-hover:scale-110 transition-transform duration-300">
-                     <Thermometer size={28} className="text-white" />
-                  </div>
-                  <div>
-                     <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-indigo-400 transition-colors">Технология HotKeep</h3>
-                     <p className="text-slate-400 leading-relaxed">
-                        Благодаря специальным термосумкам и продуманной логистике, продукты сохраняют идеальную температуру. Обед приедет горячим, словно его только что сняли с плиты.
-                     </p>
-                  </div>
-               </div>
-
-               {/* Item 3 - CHANGED to Fuchsia */}
-               <div className="flex gap-6 group">
-                  <div className="w-14 h-14 rounded-full bg-fuchsia-600 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(192,38,211,0.4)] group-hover:scale-110 transition-transform duration-300">
-                     <Leaf size={28} className="text-white" />
-                  </div>
-                  <div>
-                     <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-fuchsia-400 transition-colors">Экологичность</h3>
-                     <p className="text-slate-400 leading-relaxed">
-                        Мы заботимся о планете! Используем безопасную упаковку, которую можно сдать на переработку. С Obedi VL вы получаете не только вкусную еду, но и уверенность в её безопасности.
-                     </p>
-                  </div>
-               </div>
-
+              <button 
+                onClick={() => scrollToSection('menu-start')}
+                className="px-8 py-4 bg-white text-slate-900 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg shadow-white/10"
+              >
+                 Выбрать обед
+              </button>
             </div>
           </div>
         </div>
@@ -553,152 +550,92 @@ export default function App() {
         activeCategory={activeCategory} 
         onCategoryChange={setActiveCategory}
         onAddToCart={addToCart}
-        onOpenModal={setModalItem}
+        onOpenModal={(item) => setModalItem(item)}
       />
 
-      {/* DELIVERY INFO */}
+      {/* Delivery Info */}
       <div id="delivery-info">
         <DeliveryInfo />
       </div>
 
-      {/* REVIEWS SECTION */}
-      <section className="py-24 relative z-10">
-        <div className="max-w-7xl mx-auto px-4 md:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">Отзывы клиентов</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {REVIEWS.map((review) => (
-              <div key={review.id} className="glass p-8 rounded-3xl border border-white/5 relative">
-                <div className="absolute -top-4 -left-4 text-6xl text-indigo-500/20 font-serif">"</div>
-                <div className="flex gap-1 mb-4">
-                  {[1,2,3,4,5].map(i => <Star key={i} size={16} className="fill-yellow-400 text-yellow-400" />)}
-                </div>
-                <p className="text-slate-300 mb-6 italic">{review.text}</p>
-                <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
-                      {review.name.charAt(0)}
-                   </div>
-                   <div>
-                      <div className="text-white font-bold text-sm">{review.name}</div>
-                      <div className="text-indigo-400 text-xs">{review.role}</div>
-                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ SECTION */}
-      <section className="py-24 relative z-10 bg-slate-900/50">
-        <div className="max-w-3xl mx-auto px-4 md:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 text-center">Часто задаваемые вопросы</h2>
-          <div className="space-y-4">
-            {FAQ.map((item, idx) => (
-              <div key={idx} className="glass rounded-2xl overflow-hidden border border-white/5">
-                <button 
-                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                  className="w-full flex justify-between items-center p-6 text-left hover:bg-white/5 transition"
-                >
-                  <span className="text-lg font-medium text-white">{item.q}</span>
-                  {openFaq === idx ? <ChevronUp className="text-indigo-400" /> : <ChevronDown className="text-slate-500" />}
-                </button>
-                <div className={`px-6 text-slate-400 leading-relaxed transition-all duration-300 overflow-hidden ${openFaq === idx ? 'max-h-48 pb-6 opacity-100' : 'max-h-0 opacity-0'}`}>
-                  {item.a}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* FOOTER */}
-      <footer className="relative z-10 bg-black pt-20 pb-10 border-t border-white/10">
-         <div className="max-w-7xl mx-auto px-4 md:px-8">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-               <div className="col-span-1 md:col-span-1">
-                  <Logo variant="footer" className="mb-6" />
-                  <p className="text-slate-500 text-sm mb-6">
-                    Вкусная домашняя еда с доставкой в офис и на дом. Готовим с любовью во Владивостоке.
-                  </p>
-                  <div className="flex gap-4">
-                     <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-indigo-600 hover:text-white transition"><Instagram size={18} /></a>
-                     <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-indigo-600 hover:text-white transition"><Send size={18} /></a>
-                  </div>
-               </div>
-               
-               <div>
-                  <h4 className="text-white font-bold mb-6">Меню</h4>
-                  <ul className="space-y-4 text-sm text-slate-400">
-                     <li><button onClick={() => scrollToSection('featured-sets')} className="hover:text-indigo-400 transition">Комплексы</button></li>
-                     <li><button onClick={() => scrollToSection('menu-start')} className="hover:text-indigo-400 transition">Бизнес-ланчи</button></li>
-                     <li><button onClick={() => { setActiveCategory('extras'); scrollToSection('menu-start'); }} className="hover:text-indigo-400 transition">Десерты и напитки</button></li>
-                  </ul>
-               </div>
+      <footer className="bg-slate-950 pt-20 pb-10 border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+              <div className="col-span-1 md:col-span-1">
+                 <Logo className="mb-6" variant="footer" />
+                 <p className="text-slate-500 text-sm mb-6">
+                   Сервис доставки правильного питания для офисов и дома во Владивостоке.
+                 </p>
+                 <div className="flex gap-4">
+                    <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-indigo-600 hover:text-white transition-all">
+                       <Instagram size={18} />
+                    </a>
+                    <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:bg-blue-500 hover:text-white transition-all">
+                       <Send size={18} />
+                    </a>
+                 </div>
+              </div>
+              
+              <div>
+                 <h4 className="text-white font-bold mb-6">Компания</h4>
+                 <ul className="space-y-3 text-sm text-slate-400">
+                    <li><a href="#" className="hover:text-indigo-400 transition">О нас</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Вакансии</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Контакты</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Блог</a></li>
+                 </ul>
+              </div>
 
-               <div>
-                  <h4 className="text-white font-bold mb-6">Компания</h4>
-                  <ul className="space-y-4 text-sm text-slate-400">
-                     <li><button onClick={() => scrollToSection('delivery-info')} className="hover:text-indigo-400 transition">Доставка</button></li>
-                     <li><a href="#" className="hover:text-indigo-400 transition">О нас</a></li>
-                     <li><a href="#" className="hover:text-indigo-400 transition">Контакты</a></li>
-                  </ul>
-               </div>
+              <div>
+                 <h4 className="text-white font-bold mb-6">Помощь</h4>
+                 <ul className="space-y-3 text-sm text-slate-400">
+                    <li><a href="#" className="hover:text-indigo-400 transition">Доставка и оплата</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Вопросы и ответы</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Юридическим лицам</a></li>
+                    <li><a href="#" className="hover:text-indigo-400 transition">Публичная оферта</a></li>
+                 </ul>
+              </div>
 
-               <div>
-                  <h4 className="text-white font-bold mb-6">Контакты</h4>
-                  <ul className="space-y-4 text-sm text-slate-400">
-                     <li className="flex items-start gap-3">
-                        <MapPin size={18} className="text-indigo-500 shrink-0 mt-0.5" />
-                        <span>ул. Надибаидзе, 28, Владивосток</span>
-                     </li>
-                     <li className="flex items-center gap-3">
-                        <Phone size={18} className="text-indigo-500 shrink-0" />
-                        <span>+7 (423) 200-00-00</span>
-                     </li>
-                     <li className="flex items-center gap-3">
-                        <Clock size={18} className="text-indigo-500 shrink-0" />
-                        <span>Ежедневно 09:00 - 21:00</span>
-                     </li>
-                  </ul>
-               </div>
-            </div>
-            
-            <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-600">
-               <div>© 2024 Obedi VL. Все права защищены.</div>
-               <div className="flex gap-6">
-                  <a href="#" className="hover:text-slate-400 transition">Политика конфиденциальности</a>
-                  <a href="#" className="hover:text-slate-400 transition">Публичная оферта</a>
-               </div>
-            </div>
-         </div>
+              <div>
+                 <h4 className="text-white font-bold mb-6">Контакты</h4>
+                 <ul className="space-y-4 text-sm text-slate-400">
+                    <li className="flex items-start gap-3">
+                       <MapPin size={18} className="text-indigo-500 shrink-0 mt-0.5" />
+                       <span>г. Владивосток,<br/>ул. Светланская, 33</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                       <Phone size={18} className="text-indigo-500 shrink-0" />
+                       <span>+7 (423) 200-00-00</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                       <Clock size={18} className="text-indigo-500 shrink-0" />
+                       <span>Пн-Вс: 09:00 - 21:00</span>
+                    </li>
+                 </ul>
+              </div>
+           </div>
+           
+           <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-600">
+              <div>© 2024 Obedi VL. Все права защищены.</div>
+              <div className="flex gap-6">
+                 <a href="#" className="hover:text-slate-400">Политика конфиденциальности</a>
+                 <a href="#" className="hover:text-slate-400">Пользовательское соглашение</a>
+              </div>
+           </div>
+        </div>
       </footer>
 
-      {/* MODALS */}
+      {/* Modals */}
       <CartSidebar 
         isOpen={isCartOpen} 
         onClose={() => setIsCartOpen(false)} 
         cart={cart}
         onUpdateQuantity={updateQuantity}
         onRemove={removeFromCart}
-        onCheckout={() => {
-           setIsCartOpen(false);
-           setIsCheckoutOpen(true);
-        }}
+        onCheckout={() => setIsCheckoutOpen(true)}
       />
-
-      <AIChef 
-        menuItems={menuItems}
-        onAddToCart={addToCart}
-      />
-
-      {modalItem && (
-        <ProductModal 
-          item={modalItem} 
-          onClose={() => setModalItem(null)} 
-          onAddToCart={addToCart} 
-        />
-      )}
-
+      
       {isConstructorOpen && (
         <LunchConstructor 
           onClose={() => setIsConstructorOpen(false)}
@@ -709,30 +646,39 @@ export default function App() {
 
       {isCheckoutOpen && (
         <CheckoutModal 
-           cart={cart}
-           total={cart.reduce((sum, item) => sum + item.price * item.quantity, 0)}
-           onClose={() => setIsCheckoutOpen(false)}
-           onConfirm={handleCheckoutComplete}
+          cart={cart}
+          total={cart.reduce((sum, item) => sum + item.price * item.quantity, 0)}
+          onClose={() => setIsCheckoutOpen(false)}
+          onConfirm={handleCheckoutComplete}
         />
       )}
 
       {isAuthOpen && (
           <AuthModal 
-             onClose={() => setIsAuthOpen(false)}
-             onLoginSuccess={handleLoginSuccess}
+            onClose={() => setIsAuthOpen(false)}
+            onLoginSuccess={handleLoginSuccess}
           />
       )}
 
-      {user && (
+      {isProfileOpen && user && (
           <UserProfile 
-              isOpen={isProfileOpen}
-              onClose={() => setIsProfileOpen(false)}
-              user={user}
-              onLogout={handleLogout}
-              onUpdateUser={setUser}
+             isOpen={isProfileOpen}
+             onClose={() => setIsProfileOpen(false)}
+             user={user}
+             onLogout={handleLogout}
+             onUpdateUser={setUser}
           />
       )}
 
+      {modalItem && (
+        <ProductModal 
+          item={modalItem} 
+          onClose={() => setModalItem(null)} 
+          onAddToCart={addToCart} 
+        />
+      )}
+
+      <AIChef menuItems={menuItems} onAddToCart={addToCart} />
     </div>
   );
 }
