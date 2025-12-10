@@ -34,6 +34,7 @@ import { DeliveryInfo } from './components/DeliveryInfo';
 import { Logo } from './components/Logo';
 import { LegalModals } from './components/LegalModals';
 import { FAQModal } from './components/FAQModal';
+import { UpsellModal } from './components/UpsellModal';
 import { MenuItem, CartItem, Category, Order, User } from './types';
 import { historyService } from './services/historyService';
 import { authService } from './services/authService';
@@ -56,6 +57,11 @@ export default function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isFAQOpen, setIsFAQOpen] = useState(false);
   const [legalModal, setLegalModal] = useState<'privacy' | 'terms' | null>(null);
+  
+  // Upsell State
+  const [isUpsellOpen, setIsUpsellOpen] = useState(false);
+  const [upsellItem, setUpsellItem] = useState<MenuItem | null>(null);
+  const UPSELL_PRICE = 90; // Special offer price
   
   // Mobile Menu State
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -148,6 +154,63 @@ export default function App() {
       setLastOrder(null); // Hide notification
     }
   };
+
+  // --- UPSELL LOGIC START ---
+  const handleInitiateCheckout = () => {
+    // Logic: Has Soup AND Main BUT No Drink
+    const hasSoup = cart.some(i => 
+      i.title.toLowerCase().includes('суп') || 
+      i.title.toLowerCase().includes('борщ') || 
+      i.title.toLowerCase().includes('том ям') ||
+      i.title.toLowerCase().includes('солянка')
+    );
+    
+    const hasMain = cart.some(i => 
+      i.category === 'lunch' && 
+      !i.title.toLowerCase().includes('суп') && 
+      !i.title.toLowerCase().includes('борщ') && 
+      !i.title.toLowerCase().includes('том ям') &&
+      !i.title.toLowerCase().includes('солянка')
+    );
+
+    const hasDrink = cart.some(i => 
+      i.category === 'extras' || 
+      i.title.toLowerCase().includes('морс') ||
+      i.title.toLowerCase().includes('напиток') ||
+      i.title.toLowerCase().includes('сок')
+    );
+
+    // Try to find the specific "Mors" item (ID 17) or any drink to upsell
+    const morsItem = menuItems.find(i => i.id === '17'); // ID 17 is usually Mors in MOCK_MENU
+
+    if (hasSoup && hasMain && !hasDrink && morsItem) {
+      setUpsellItem(morsItem);
+      setIsUpsellOpen(true);
+      setIsCartOpen(false); // Close cart sidebar to focus on modal
+    } else {
+      setIsCheckoutOpen(true);
+    }
+  };
+
+  const handleAcceptUpsell = () => {
+    if (upsellItem) {
+      // Add item with discounted price
+      const discountedItem = { ...upsellItem, price: UPSELL_PRICE };
+      addToCart(discountedItem); // Using addToCart logic but we handle UI transitions manually
+      setIsUpsellOpen(false);
+      
+      // Small delay to let the user see the addition or transition smoothly
+      setTimeout(() => {
+        setIsCheckoutOpen(true);
+      }, 300);
+    }
+  };
+
+  const handleSkipUpsell = () => {
+    setIsUpsellOpen(false);
+    setIsCheckoutOpen(true);
+  };
+  // --- UPSELL LOGIC END ---
 
   const handleCheckoutComplete = () => {
     const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -681,7 +744,7 @@ export default function App() {
         cart={cart}
         onUpdateQuantity={updateQuantity}
         onRemove={removeFromCart}
-        onCheckout={() => setIsCheckoutOpen(true)}
+        onCheckout={handleInitiateCheckout}
       />
       
       {isConstructorOpen && (
@@ -723,6 +786,16 @@ export default function App() {
           item={modalItem} 
           onClose={() => setModalItem(null)} 
           onAddToCart={addToCart} 
+        />
+      )}
+      
+      {isUpsellOpen && upsellItem && (
+        <UpsellModal 
+          item={upsellItem}
+          discountPrice={UPSELL_PRICE}
+          onClose={() => { setIsUpsellOpen(false); setIsCartOpen(true); }}
+          onAdd={handleAcceptUpsell}
+          onSkip={handleSkipUpsell}
         />
       )}
 
