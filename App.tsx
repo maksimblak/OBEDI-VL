@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   ShoppingBag, 
@@ -29,6 +30,7 @@ import { AuthModal } from './components/AuthModal';
 import { UserProfile } from './components/UserProfile';
 import { DeliveryInfo } from './components/DeliveryInfo';
 import { Logo } from './components/Logo';
+import { LegalModals } from './components/LegalModals';
 import { MenuItem, CartItem, Category, Order, User } from './types';
 import { historyService } from './services/historyService';
 import { authService } from './services/authService';
@@ -49,6 +51,7 @@ export default function App() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [legalModal, setLegalModal] = useState<'privacy' | 'terms' | null>(null);
   
   // Mobile Menu State
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -580,20 +583,19 @@ export default function App() {
               <div>
                  <h4 className="text-white font-bold mb-6">Компания</h4>
                  <ul className="space-y-3 text-sm text-slate-400">
-                    <li><a href="#" className="hover:text-indigo-400 transition">О нас</a></li>
-                    <li><a href="#" className="hover:text-indigo-400 transition">Вакансии</a></li>
-                    <li><a href="#" className="hover:text-indigo-400 transition">Контакты</a></li>
-                    <li><a href="#" className="hover:text-indigo-400 transition">Блог</a></li>
+                    <li><button onClick={() => {}} className="hover:text-indigo-400 transition">О нас</button></li>
+                    <li><button onClick={() => {}} className="hover:text-indigo-400 transition">Вакансии</button></li>
+                    <li><button onClick={() => {}} className="hover:text-indigo-400 transition">Контакты</button></li>
+                    <li><button onClick={() => {}} className="hover:text-indigo-400 transition">Блог</button></li>
                  </ul>
               </div>
 
               <div>
                  <h4 className="text-white font-bold mb-6">Помощь</h4>
                  <ul className="space-y-3 text-sm text-slate-400">
-                    <li><a href="#" className="hover:text-indigo-400 transition">Доставка и оплата</a></li>
-                    <li><a href="#" className="hover:text-indigo-400 transition">Вопросы и ответы</a></li>
-                    <li><a href="#" className="hover:text-indigo-400 transition">Юридическим лицам</a></li>
-                    <li><a href="#" className="hover:text-indigo-400 transition">Публичная оферта</a></li>
+                    <li><button onClick={() => scrollToSection('delivery-info')} className="hover:text-indigo-400 transition">Доставка и оплата</button></li>
+                    <li><button onClick={() => {}} className="hover:text-indigo-400 transition">Вопросы и ответы</button></li>
+                    <li><button onClick={() => {}} className="hover:text-indigo-400 transition">Юридическим лицам</button></li>
                  </ul>
               </div>
 
@@ -619,8 +621,12 @@ export default function App() {
            <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-600">
               <div>© 2024 Obedi VL. Все права защищены.</div>
               <div className="flex gap-6">
-                 <a href="#" className="hover:text-slate-400">Политика конфиденциальности</a>
-                 <a href="#" className="hover:text-slate-400">Пользовательское соглашение</a>
+                 <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-400 transition">
+                   Политика конфиденциальности
+                 </button>
+                 <button onClick={() => setLegalModal('terms')} className="hover:text-slate-400 transition">
+                   Пользовательское соглашение
+                 </button>
               </div>
            </div>
         </div>
@@ -675,6 +681,14 @@ export default function App() {
           item={modalItem} 
           onClose={() => setModalItem(null)} 
           onAddToCart={addToCart} 
+        />
+      )}
+
+      {/* Legal Modals */}
+      {legalModal && (
+        <LegalModals 
+          type={legalModal}
+          onClose={() => setLegalModal(null)}
         />
       )}
 

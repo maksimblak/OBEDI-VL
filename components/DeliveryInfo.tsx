@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { MapPin, Clock, Wallet, Banknote, Car, Navigation, Search, CheckCircle2, ChevronRight, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { MapPin, Clock, Wallet, Banknote, Car, Navigation, Search, CheckCircle2, ChevronRight, AlertCircle, Home } from 'lucide-react';
 import { checkAddressZone } from '../services/geminiService';
 
 // Coordinates for Ulitsa Nadibaidze, 28, Vladivostok
@@ -17,7 +17,6 @@ interface ZoneData {
   time: string;
   price: string;
   description: string;
-  streets: string[];
   distanceLimit: number;
   color: string;
   glowColor: string;
@@ -31,7 +30,6 @@ const ZONES: ZoneData[] = [
     time: '30-45 мин',
     price: 'Бесплатно от 3000₽',
     description: 'Чуркин, Калинина, Окатовая, Змеинка, Диомид.',
-    streets: ['надибаидзе', 'калинина', 'черемуховая', 'окатовая', 'вязовая', 'интернациональная', 'харьковская', 'гульбиновича', 'кизлярская', 'фастовская', 'березовая', 'краева', 'пихтовая'],
     distanceLimit: 4, 
     color: 'text-emerald-400',
     glowColor: 'shadow-emerald-500/40 border-emerald-500/50',
@@ -43,7 +41,6 @@ const ZONES: ZoneData[] = [
     time: '45-60 мин',
     price: 'Бесплатно от 3000₽',
     description: 'Центр, Луговая, Спортивная, Эгершельд, Гоголя.',
-    streets: ['светланская', 'алеутская', 'океанский', 'луговая', 'спортивная', 'фадеева', 'некрасовская', 'гоголя', 'суханова', 'пушкинская', 'ленинская', 'тигровая', 'пограничная', 'семеновская'],
     distanceLimit: 8,
     color: 'text-amber-400',
     glowColor: 'shadow-amber-500/40 border-amber-500/50',
@@ -55,7 +52,6 @@ const ZONES: ZoneData[] = [
     time: '60-90 мин',
     price: 'Бесплатно от 3000₽',
     description: 'Вторая речка, Баляева, Снеговая падь, Тихая, Патрокл.',
-    streets: ['русская', 'столетия', 'баляева', 'снеговая', 'нейбута', 'кузнецова', 'ладыгина', 'борадинская', 'давыдова', 'кирова', 'магнитогорская', 'заря', 'седанка', 'патрокл', 'басаргина'],
     distanceLimit: 15,
     color: 'text-rose-400',
     glowColor: 'shadow-rose-500/40 border-rose-500/50',
@@ -63,11 +59,80 @@ const ZONES: ZoneData[] = [
   }
 ];
 
+// Massively expanded list of Vladivostok streets
+const VLADIVOSTOK_STREETS = [
+  "1-я Морская ул", "1-я Поселковая ул", "1-я Промышленная ул", "100-летия Владивостока пр-кт", 
+  "40 лет ВЛКСМ ул", "50 лет ВЛКСМ ул", "Абрекская ул", "Авроровская ул", "Адмирала Горшкова ул", 
+  "Адмирала Захарова ул", "Адмирала Корнилова ул", "Адмирала Кузнецова ул", "Адмирала Макарова ул",
+  "Адмирала Невельского ул", "Адмирала Смирнова ул", "Адмирала Фокина ул", "Адмирала Юмашева ул",
+  "Аксаковская ул", "Алеутская ул", "Александровича ул", "Аллилуева ул", "Алтайская ул", "Амурская ул", 
+  "Анны Щетининой ул", "Арсеньева ул", "Арсенальная ул", "Артековская ул", "Артиллерийская ул",
+  "Байдукова ул", "Балтийская ул", "Баляева ул", "Баратаева ул", "Бархатная ул", "Басаргина ул", 
+  "Батарейная ул", "Башидзе ул", "Беговая ул", "Береговая ул", "Березовая ул", "Бестужева ул", 
+  "Борисенко ул", "Бородинская ул", "Братская ул", "Брестский пер", "Бурачка ул", "Ватутина ул", 
+  "Верхнепортовая ул", "Верещагина ул", "Виктория ул", "Вилкова ул", "Вилюйская ул", "Виргинская ул",
+  "Владикавказская ул", "Военное Шоссе ул", "Волжская ул", "Володарского ул", "Волховская ул", 
+  "Воропаева ул", "Восточная ул", "Всеволода Сибирцева ул", "Вулканная ул", "Вязовая ул", 
+  "Гамарника ул", "Гастелло ул", "Гашкевича ул", "Героев Варяга ул", "Героев Тихоокеанцев ул", 
+  "Героев Хасана ул", "Глинки ул", "Гоголя ул", "Горная ул", "Горького ул", "Гризодубовой ул", 
+  "Громова ул", "Гроссмана ул", "Гульбиновича ул", "Давыдова ул", "Дальзаводская ул", "Дальняя ул", 
+  "Дежнева ул", "Демьяна Бедного ул", "Депутатская аллея", "Державина ул", "Днепровская ул", 
+  "Днепровский пер", "Добровольского ул", "Достоевского ул", "Дубовая ул", "Енисейская ул", 
+  "Жариковская ул", "Жигура ул", "Жуковского ул", "Завойко ул", "Залесная ул", "Западная ул", 
+  "Запорожская ул", "Заречная ул", "Заря ул", "Зейская ул", "Зеленая ул", "Змеинка ул", 
+  "Зои Космодемьянской ул", "Ивановская ул", "Иртышская ул", "Ильичева ул", "Иманская ул", 
+  "Интернациональная ул", "Казанская ул", "Калинина ул", "Калужская ул", "Камская ул", 
+  "Камский пер", "Капитана Шефнера ул", "Карабельная Набережная", "Карбышева ул", "Карьерная ул", 
+  "Карякинская ул", "Каплунова ул", "Каспийская ул", "Катерная ул", "Каховская ул", "Керченская ул", 
+  "Киевская ул", "Кипарисовая ул", "Кирова ул", "Кирпичный Завод", "Киффа ул", "Кленовая ул", 
+  "Клубная ул", "Колесника ул", "Колхозная ул", "Командорская ул", "Коммунаров ул", "Комсомольская ул", 
+  "Корнилова ул", "Космонавтов ул", "Котельникова ул", "Красного Знамени пр-кт", "Краснознаменный пер", 
+  "Крыгина ул", "Кубанская ул", "Кузнецкая ул", "Кузнецова ул", "Куйбышева ул", "Курильская ул", 
+  "Курчатова ул", "Кутузова ул", "Ладыгина ул", "Лазо ул", "Левитана ул", "Лейтенанта Шмидта ул", 
+  "Ленинская ул", "Леонова ул", "Лермонтова ул", "Лесная ул", "Лиманная ул", "Липовая ул", 
+  "Ломоносова ул", "Луговая ул", "Луцкого ул", "Лыковая ул", "Магнитогорская ул", "Майора Филиппова ул", 
+  "Макарова ул", "Маковского ул", "Малая ул", "Марины Расковой ул", "Марченко ул", "Матросская ул", 
+  "Махалина ул", "Маяковского ул", "Мельниковская ул", "Менделеева ул", "Металлургическая ул", 
+  "Мечникова ул", "Минеральная ул", "Мира ул", "Михайловская ул", "Мичуринская ул", "Могилевская ул", 
+  "Можайская ул", "Молодежная ул", "Монтажная ул", "Мордовцева ул", "Морозова ул", "Московская ул", 
+  "Муравьева-Амурского ул", "Мусоргского ул", "Мыс Чумака ул", "Набережная ул", "Надибаидзе ул", 
+  "Народный пр-кт", "Нахимова ул", "Невская ул", "Невельского ул", "Нейбута ул", "Некрасовская ул", 
+  "Некрасовский пер", "Нерчинская ул", "Нестерова ул", "Нижнепортовая ул", "Никифорова ул", 
+  "Николаевская ул", "Новоивановская ул", "Новожилова ул", "Обручева ул", "Овчинникова ул", 
+  "Одесская ул", "Океанский пр-кт", "Окатовая ул", "Октябрьская ул", "Олега Кошевого ул", 
+  "Ольховая ул", "Омская ул", "Онежская ул", "Орловская ул", "Осипенко ул", "Острякова пр-кт", 
+  "Островского ул", "Очаковская ул", "Пальчевского ул", "Партизанский пр-кт", "Патрокл ул", 
+  "Перекопский пер", "Печорская ул", "Пионерская ул", "Пихтовая ул", "Пограничная ул", "Полевая ул", 
+  "Пологая ул", "Полярная ул", "Полярный пер", "Поселковая ул", "Постышева ул", "Посьетская ул", 
+  "Почтовая ул", "Прапорщика Комарова ул", "Пржевальского ул", "Прибрежная ул", "Приморская ул", 
+  "Приходько ул", "Проселочная ул", "Проспект 100-летия Владивостока", "Путятинская ул", 
+  "Пушкинская ул", "Пятнадцатая ул", "Пятая ул", "Радио ул", "Ракетная ул", "Республиканская ул", 
+  "Римского-Корсакова ул", "Руднева ул", "Русская ул", "Рылеева ул", "С. Лазо ул", "Сабанеева ул", 
+  "Садовая ул", "Саперная ул", "Сахалинская ул", "Светланская ул", "Связи ул", "Северная ул", 
+  "Сельская ул", "Семеновская ул", "Сергея Лазо ул", "Серова ул", "Сибирцева ул", "Сипягина ул", 
+  "Славянская ул", "Слуцкого ул", "Снеговая ул", "Солнечная ул", "Сочинская ул", "Союзная ул", 
+  "Спиридонова ул", "Спортивная ул", "Спутник ул", "Станюковича ул", "Стрелковая ул", "Стрелочная ул", 
+  "Строительная ул", "Суханова ул", "Татарская ул", "Терешковой ул", "Тигровая ул", "Тимофеева ул", 
+  "Тихоокеанская ул", "Толстого ул", "Тополиная аллея", "Трамвайная ул", "Трудовая ул", 
+  "Тунгусская ул", "Тургенева ул", "Тухачевского ул", "Уборевича ул", "Угловая ул", "Украинская ул", 
+  "Ульяновская ул", "Уральская ул", "Успенского ул", "Уссурийская ул", "Уткинская ул", "Учебная пер", 
+  "Фадеева ул", "Фастовская ул", "Феодосийская ул", "Фирсова ул", "Флотская ул", "Фонтанная ул", 
+  "Хабаровская ул", "Харьковская ул", "Херсонская ул", "Холмская ул", "Цимлянская ул", "Чапаева ул", 
+  "Часовитина ул", "Черемуховая ул", "Черняховского ул", "Чехова ул", "Чкалова ул", "Чукотская ул", 
+  "Шевченко ул", "Шепеткова ул", "Шилкинская ул", "Школьная ул", "Шкотская ул", "Шошина ул", 
+  "Штейнберга ул", "Щитовая ул", "Щедрина ул", "Экипажная ул", "Энгельса ул", "Южно-Уральская ул", 
+  "Юмашева ул", "Яблочкова ул", "Ялтинская ул"
+].sort();
+
 export const DeliveryInfo: React.FC = () => {
   const [addressInput, setAddressInput] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [detectedZone, setDetectedZone] = useState<ZoneType>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'error' | 'neutral' } | null>(null);
+  const [showHouseHint, setShowHouseHint] = useState(false);
+  
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; 
@@ -83,6 +148,34 @@ export const DeliveryInfo: React.FC = () => {
 
   const deg2rad = (deg: number) => deg * (Math.PI / 180);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setAddressInput(val);
+    setShowHouseHint(false); // Hide hint if user types
+
+    if (val.length > 1) {
+      const filtered = VLADIVOSTOK_STREETS.filter(street => 
+        street.toLowerCase().includes(val.toLowerCase())
+      );
+      setSuggestions(filtered.slice(0, 5));
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const selectSuggestion = (street: string) => {
+    // Add space after street name to immediately allow house number entry
+    const newVal = `${street} `; 
+    setAddressInput(newVal);
+    setSuggestions([]);
+    setShowHouseHint(true);
+    
+    // Keep focus and cursor at end
+    if (inputRef.current) {
+        inputRef.current.focus();
+    }
+  };
+
   const handleGeoCheck = () => {
     if (!navigator.geolocation) {
       setFeedback({ text: "Геолокация недоступна", type: 'error' });
@@ -90,6 +183,7 @@ export const DeliveryInfo: React.FC = () => {
     }
     setIsSearching(true);
     setFeedback(null);
+    setShowHouseHint(false);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -103,7 +197,7 @@ export const DeliveryInfo: React.FC = () => {
         
         setDetectedZone(zone);
         if (zone) {
-            setFeedback({ text: `Вы в зоне доставки (${dist.toFixed(1)} км)`, type: 'success' });
+            setFeedback({ text: `Вы в зоне доставки (${dist.toFixed(1)} км). Отлично!`, type: 'success' });
         } else {
             setFeedback({ text: `Вы слишком далеко (${dist.toFixed(1)} км)`, type: 'error' });
         }
@@ -120,9 +214,19 @@ export const DeliveryInfo: React.FC = () => {
     e.preventDefault();
     if (!addressInput.trim()) return;
 
+    // Basic validation to check if it looks like just a street name without a number
+    const hasNumber = /\d/.test(addressInput);
+    if (!hasNumber) {
+        setFeedback({ text: "Пожалуйста, укажите номер дома", type: 'neutral' });
+        setShowHouseHint(true);
+        return;
+    }
+
     setIsSearching(true);
+    setSuggestions([]); 
     setFeedback(null);
     setDetectedZone(null);
+    setShowHouseHint(false);
 
     try {
         const result = await checkAddressZone(addressInput);
@@ -130,18 +234,19 @@ export const DeliveryInfo: React.FC = () => {
         if (result.found) {
             setDetectedZone(result.zone);
             if (result.zone) {
+                // SUCCESS MESSAGE AS REQUESTED
                 setFeedback({ 
-                    text: `Нашли: ${result.formattedAddress} (~${result.distance} км)`, 
+                    text: `Отлично! Сюда возим. (${result.formattedAddress}, ~${result.distance} км)`, 
                     type: 'success' 
                 });
             } else {
                 setFeedback({ 
-                    text: `${result.formattedAddress} - слишком далеко (~${result.distance} км)`, 
+                    text: `${result.formattedAddress} - к сожалению, это слишком далеко (~${result.distance} км)`, 
                     type: 'error' 
                 });
             }
         } else {
-            setFeedback({ text: "Адрес не найден. Попробуйте уточнить.", type: 'error' });
+            setFeedback({ text: "Адрес не найден. Проверьте номер дома.", type: 'error' });
         }
     } catch (error) {
         setFeedback({ text: "Ошибка сервиса карт", type: 'error' });
@@ -172,14 +277,22 @@ export const DeliveryInfo: React.FC = () => {
              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-indigo-500 rounded-2xl opacity-30 group-hover:opacity-60 blur transition duration-500 animate-shine bg-[length:200%_auto]"></div>
              <div className="relative glass rounded-xl p-2 flex items-center gap-2 bg-slate-900/80">
                 <Search className="text-slate-400 ml-3 group-focus-within:text-indigo-400 transition-colors" size={20} />
-                <form onSubmit={handleTextSearch} className="flex-1">
+                <form onSubmit={handleTextSearch} className="flex-1 relative">
                   <input 
+                      ref={inputRef}
                       type="text" 
-                      placeholder="Введите улицу (например: Светланская)" 
+                      placeholder={showHouseHint ? "Введите номер дома..." : "Улица и номер дома (например: Светланская 33)"}
                       className="bg-transparent border-none outline-none text-white w-full py-2 placeholder:text-slate-500"
                       value={addressInput}
-                      onChange={(e) => setAddressInput(e.target.value)}
+                      onChange={handleInputChange}
+                      autoComplete="off"
                   />
+                  {showHouseHint && (
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 text-xs text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded animate-pulse pointer-events-none">
+                          <Home size={10} className="inline mr-1"/>
+                          № дома?
+                      </div>
+                  )}
                 </form>
                 <button 
                   type="button"
@@ -191,17 +304,34 @@ export const DeliveryInfo: React.FC = () => {
                   <Navigation size={20} className={isSearching ? 'animate-spin' : ''} />
                 </button>
              </div>
+
+             {/* Auto-complete Dropdown */}
+             {suggestions.length > 0 && (
+                <div className="absolute top-full left-0 w-full mt-2 bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 backdrop-blur-md animate-in slide-in-from-top-2">
+                   {suggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        onClick={() => selectSuggestion(suggestion)}
+                        className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-indigo-500/20 border-b border-white/5 last:border-0 transition-colors flex items-center gap-2 group/item"
+                      >
+                         <MapPin size={14} className="text-indigo-400 group-hover/item:scale-110 transition-transform" />
+                         {suggestion}
+                      </button>
+                   ))}
+                </div>
+             )}
              
              {/* Feedback Toast */}
              {feedback && (
-               <div className={`absolute -bottom-12 left-0 w-full flex justify-center animate-in slide-in-from-top-2`}>
-                  <div className={`px-4 py-2 rounded-lg text-sm font-bold shadow-lg flex items-center gap-2 ${
-                      feedback.type === 'success' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 
-                      feedback.type === 'error' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-                      'bg-slate-800 text-slate-300'
+               <div className={`absolute -bottom-20 left-0 w-full flex justify-center animate-in slide-in-from-top-2 z-0`}>
+                  <div className={`px-5 py-3 rounded-xl text-sm font-bold shadow-2xl flex items-center gap-2 backdrop-blur-xl border ${
+                      feedback.type === 'success' ? 'bg-green-500/20 text-green-300 border-green-500/40 shadow-green-500/10' : 
+                      feedback.type === 'error' ? 'bg-red-500/20 text-red-300 border-red-500/40 shadow-red-500/10' :
+                      'bg-indigo-500/20 text-indigo-200 border-indigo-500/40'
                   }`}>
-                      {feedback.type === 'error' && <AlertCircle size={14} />}
-                      {feedback.type === 'success' && <CheckCircle2 size={14} />}
+                      {feedback.type === 'error' && <AlertCircle size={16} />}
+                      {feedback.type === 'success' && <CheckCircle2 size={16} />}
+                      {feedback.type === 'neutral' && <Home size={16} />}
                       {feedback.text}
                   </div>
                </div>
