@@ -564,8 +564,8 @@ export default function App() {
       {/* FOOTER */}
       <footer className="bg-slate-950 pt-20 pb-10 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
-           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-              <div className="col-span-1 md:col-span-1">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
+              <div className="col-span-1">
                  <Logo className="mb-6" variant="footer" />
                  <p className="text-slate-500 text-sm mb-6">
                    Сервис доставки правильного питания для офисов и дома во Владивостоке.
@@ -580,16 +580,6 @@ export default function App() {
                  </div>
               </div>
               
-              <div>
-                 <h4 className="text-white font-bold mb-6">Компания</h4>
-                 <ul className="space-y-3 text-sm text-slate-400">
-                    <li><button onClick={() => {}} className="hover:text-indigo-400 transition">О нас</button></li>
-                    <li><button onClick={() => {}} className="hover:text-indigo-400 transition">Вакансии</button></li>
-                    <li><button onClick={() => {}} className="hover:text-indigo-400 transition">Контакты</button></li>
-                    <li><button onClick={() => {}} className="hover:text-indigo-400 transition">Блог</button></li>
-                 </ul>
-              </div>
-
               <div>
                  <h4 className="text-white font-bold mb-6">Помощь</h4>
                  <ul className="space-y-3 text-sm text-slate-400">
