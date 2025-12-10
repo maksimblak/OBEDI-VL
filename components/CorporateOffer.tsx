@@ -24,8 +24,7 @@ export const CorporateOffer: React.FC = () => {
                  </div>
                  
                  <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-                    Организуем полноценное питание <br/>
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-fuchsia-400">для ваших сотрудников</span>
+                    Организуем полноценное питание <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-fuchsia-400">для ваших сотрудников</span>
                  </h2>
                  <p className="text-slate-300 mb-8 text-lg leading-relaxed border-l-2 border-indigo-500/50 pl-4">
                     Завтраки, обеды и ужины с доставкой в любое удобное для вас время!
@@ -33,13 +32,11 @@ export const CorporateOffer: React.FC = () => {
 
                  {/* Target Audience Chips */}
                  <div className="mb-10 bg-white/5 p-6 rounded-2xl border border-white/5">
-                    <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
                        <span className="w-1 h-4 bg-fuchsia-500 rounded-full"></span>
                        Кому подходит наш сервис:
                     </h4>
-                    <p className="text-sm text-slate-400 mb-4">
-                       Мы сможем организовать питание для таких объектов как офисы, строительные объекты, складские помещения, заводы, съемочные площадки и пр.
-                    </p>
+                    
                     <div className="flex flex-wrap gap-3">
                        {targets.map((t, idx) => (
                           <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-white/10 rounded-lg text-slate-300 text-xs font-medium hover:border-indigo-500/30 transition-colors cursor-default">
