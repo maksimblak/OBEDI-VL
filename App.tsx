@@ -595,8 +595,6 @@ export default function App() {
                  <ul className="space-y-4 text-sm text-slate-400">
                     <li><button onClick={() => scrollToSection('delivery-info')} className="hover:text-indigo-400 transition">Доставка и зоны</button></li>
                     <li><button onClick={() => setIsFAQOpen(true)} className="hover:text-indigo-400 transition">Вопросы и ответы</button></li>
-                    <li><button onClick={() => setLegalModal('privacy')} className="hover:text-indigo-400 transition">Политика конфиденциальности</button></li>
-                    <li><button onClick={() => setLegalModal('terms')} className="hover:text-indigo-400 transition">Пользовательское соглашение</button></li>
                  </ul>
               </div>
 
@@ -606,7 +604,7 @@ export default function App() {
                  <ul className="space-y-4 text-sm text-slate-400">
                     <li className="flex items-start gap-3">
                        <MapPin size={18} className="text-indigo-500 shrink-0 mt-0.5" />
-                       <span>г. Владивосток,<br/>ул. Светланская, 33</span>
+                       <span>г. Владивосток,<br/>ул. Надибаидзе, 28</span>
                     </li>
                     <li className="flex items-center gap-3">
                        <Phone size={18} className="text-indigo-500 shrink-0" />
@@ -657,10 +655,10 @@ export default function App() {
               <div>© 2024 Obedi VL. Все права защищены.</div>
               <div className="flex gap-6">
                  <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-400 transition">
-                   Privacy Policy
+                   Политика конфиденциальности
                  </button>
                  <button onClick={() => setLegalModal('terms')} className="hover:text-slate-400 transition">
-                   Terms of Service
+                   Пользовательское соглашение
                  </button>
               </div>
            </div>
