@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Building2, HardHat, Warehouse, Factory, Clapperboard, Award, ChefHat, FileCheck, Thermometer, Briefcase } from 'lucide-react';
 
@@ -99,7 +98,7 @@ export const CorporateOffer: React.FC<CorporateOfferProps> = ({ onRequestOffer }
                       onClick={onRequestOffer}
                       className="px-8 py-4 bg-white text-slate-900 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg shadow-white/10 flex-1 sm:flex-none text-center transform active:scale-95"
                     >
-                        Получить предложение
+                        Получить коммерческое предложение
                     </button>
                  </div>
               </div>
