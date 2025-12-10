@@ -2,7 +2,11 @@
 import React from 'react';
 import { Building2, HardHat, Warehouse, Factory, Clapperboard, Award, ChefHat, FileCheck, Thermometer, Briefcase } from 'lucide-react';
 
-export const CorporateOffer: React.FC = () => {
+interface CorporateOfferProps {
+  onRequestOffer: () => void;
+}
+
+export const CorporateOffer: React.FC<CorporateOfferProps> = ({ onRequestOffer }) => {
   const targets = [
     { icon: <Building2 size={20} />, label: "Офисы" },
     { icon: <HardHat size={20} />, label: "Строительные объекты" },
@@ -91,7 +95,10 @@ export const CorporateOffer: React.FC = () => {
                  </div>
 
                  <div className="flex flex-col sm:flex-row gap-4">
-                    <button className="px-8 py-4 bg-white text-slate-900 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg shadow-white/10 flex-1 sm:flex-none text-center">
+                    <button 
+                      onClick={onRequestOffer}
+                      className="px-8 py-4 bg-white text-slate-900 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg shadow-white/10 flex-1 sm:flex-none text-center transform active:scale-95"
+                    >
                         Получить предложение
                     </button>
                  </div>

@@ -184,6 +184,11 @@ export default function App() {
       setIsProfileOpen(false);
   };
 
+  const handleCorporateRequest = () => {
+    const message = encodeURIComponent("Здравствуйте! Меня интересует корпоративное питание. Хочу получить предложение.");
+    window.open(`https://wa.me/79025562853?text=${message}`, '_blank');
+  };
+
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const scrollToSection = (id: string) => {
@@ -490,7 +495,7 @@ export default function App() {
       <HowItWorks />
 
       {/* CORPORATE OFFER (NEW) */}
-      <CorporateOffer />
+      <CorporateOffer onRequestOffer={handleCorporateRequest} />
 
       {/* NEW FEATURES SECTION (Styled like user requested) */}
       <section className="py-24 relative z-10 overflow-hidden bg-gradient-to-b from-slate-950 to-slate-900">
