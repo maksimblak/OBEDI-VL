@@ -107,19 +107,12 @@ export const CorporateOffer: React.FC<CorporateOfferProps> = ({ onRequestOffer }
               {/* Image Side */}
               <div className="lg:w-2/5 relative min-h-[300px] lg:min-h-full">
                  <img 
-                   src="https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=2070&auto=format&fit=crop" 
-                   alt="Corporate Catering" 
+                   src="https://images.unsplash.com/photo-1505253758473-96b701d2cd25?q=80&w=1740&auto=format&fit=crop" 
+                   alt="Corporate Catering Packs" 
                    className="absolute inset-0 w-full h-full object-cover grayscale-[10%] contrast-110"
                  />
                  {/* Gradient Overlay */}
                  <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-l from-slate-900 via-slate-900/60 to-transparent"></div>
-                 
-                 {/* Decorative Circle */}
-                 <div className="absolute bottom-10 right-10 w-32 h-32 border-2 border-white/20 rounded-full flex items-center justify-center animate-spin-slow hidden lg:flex">
-                    <div className="text-[10px] text-white/50 uppercase tracking-[0.2em] font-bold rotate-[-15deg]">
-                       Obedi VL Premium
-                    </div>
-                 </div>
               </div>
            </div>
         </div>
