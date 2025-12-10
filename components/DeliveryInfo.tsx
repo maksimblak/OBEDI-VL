@@ -398,11 +398,12 @@ export const DeliveryInfo: React.FC = () => {
                  <Clock size={32} />
               </div>
               <div>
-                 <h4 className="text-xl text-white font-bold mb-2 group-hover:text-indigo-200 transition-colors">График работы</h4>
-                 <p className="text-slate-300 text-sm mb-1">Ежедневно с 08:00 до 16:00</p>
+                 <h4 className="text-xl text-white font-bold mb-2 group-hover:text-indigo-200 transition-colors">Режим работы</h4>
+                 <p className="text-slate-300 text-sm mb-1">Заказы на сайте: <span className="text-white font-bold">Круглосуточно</span></p>
+                 <p className="text-slate-400 text-sm mb-2">Звонки и поддержка: 08:00 - 16:00</p>
                  <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Прием заказов до 16:00</p>
+                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Доставка обедов по графику</p>
                  </div>
               </div>
            </div>

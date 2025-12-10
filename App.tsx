@@ -625,9 +625,12 @@ export default function App() {
                        <Mail size={18} className="text-indigo-500 shrink-0" />
                        <a href="mailto:obedi-vl@mail.ru" className="hover:text-white transition">obedi-vl@mail.ru</a>
                     </li>
-                    <li className="flex items-center gap-3">
-                       <Clock size={18} className="text-indigo-500 shrink-0" />
-                       <span>Пн-Вс: 08:00 - 16:00</span>
+                    <li className="flex items-start gap-3">
+                       <Clock size={18} className="text-indigo-500 shrink-0 mt-0.5" />
+                       <div className="flex flex-col">
+                           <span>Заказы на сайте: 24/7</span>
+                           <span className="text-slate-500 text-xs">Звонки: 08:00 - 16:00</span>
+                       </div>
                     </li>
                     <li className="flex items-center gap-3 pt-2">
                        {/* WhatsApp */}
