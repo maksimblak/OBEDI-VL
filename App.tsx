@@ -352,7 +352,7 @@ export default function App() {
              </span>
           </h1>
           
-          <p className="text-lg md:text-xl text-slate-300 max-w-2xl mb-12 animate-fade-in leading-relaxed" style={{ animationDelay: '0.2s' }}>
+          <p className="text-lg md:text-xl text-slate-300 max-w-2xl mb-12 mt-10 animate-fade-in leading-relaxed" style={{ animationDelay: '0.2s' }}>
              Готовим "из-под ножа" сразу после заказа. Бесплатная доставка от 3000₽. Меню обновляется каждый день.
           </p>
           

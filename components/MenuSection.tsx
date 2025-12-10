@@ -133,7 +133,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
 
           {/* Week Day Selector (Only for Lunch) */}
           {activeCategory === 'lunch' && (
-            <div className="animate-fade-in w-full max-w-2xl overflow-x-auto no-scrollbar pb-2">
+            <div className="animate-fade-in w-full max-w-2xl overflow-x-auto no-scrollbar py-4">
                <div className="flex justify-center items-center gap-2 sm:gap-3 min-w-max px-2">
                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mr-2 sticky left-0">День:</span>
                  {days.map((day) => (
