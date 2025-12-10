@@ -94,9 +94,6 @@ export const CorporateOffer: React.FC = () => {
                     <button className="px-8 py-4 bg-white text-slate-900 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg shadow-white/10 flex-1 sm:flex-none text-center">
                         Получить предложение
                     </button>
-                    <a href="tel:+79025562853" className="px-8 py-4 bg-transparent border border-white/20 text-white font-bold rounded-xl hover:bg-white/5 transition-colors flex-1 sm:flex-none text-center">
-                        Связаться с менеджером
-                    </a>
                  </div>
               </div>
 
