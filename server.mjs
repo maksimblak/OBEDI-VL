@@ -196,6 +196,11 @@ const IMAGES = {
   drink1: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?q=80&w=1000&auto=format&fit=crop',
 };
 
+const RESTAURANT_COORDS = { lat: 43.096362, lon: 131.916723 };
+const VLADIVOSTOK_BOUNDS = { minLat: 42.8, maxLat: 43.3, minLon: 131.6, maxLon: 132.3 };
+const DELIVERY_ZONE_CACHE_TTL_MS = Number(process.env.DELIVERY_ZONE_CACHE_TTL_MS || 24 * 60 * 60 * 1000);
+const deliveryZoneCache = new Map(); // addressKey -> { value, expiresAt }
+
 const BASE_INSTRUCTION = `
 You are "Chef Alex", the AI culinary assistant for "Obedi VL", a premium food delivery service in Vladivostok.
 Your tone is warm, appetizing, and helpful. You speak Russian.
@@ -248,6 +253,103 @@ const normalizeAddressZone = (input) => {
     distance,
     zone: zoneFromDistance,
   };
+};
+
+const getCachedDeliveryZone = (addressKey) => {
+  const entry = deliveryZoneCache.get(addressKey);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    deliveryZoneCache.delete(addressKey);
+    return null;
+  }
+  return entry.value;
+};
+
+const setCachedDeliveryZone = (addressKey, value) => {
+  deliveryZoneCache.set(addressKey, { value, expiresAt: Date.now() + DELIVERY_ZONE_CACHE_TTL_MS });
+};
+
+const isWithinVladivostokBounds = (lat, lon) => {
+  return (
+    lat >= VLADIVOSTOK_BOUNDS.minLat &&
+    lat <= VLADIVOSTOK_BOUNDS.maxLat &&
+    lon >= VLADIVOSTOK_BOUNDS.minLon &&
+    lon <= VLADIVOSTOK_BOUNDS.maxLon
+  );
+};
+
+const geocodeAddress = async (address) => {
+  const query = `${address}, Vladivostok`;
+  const params = new URLSearchParams({
+    format: 'jsonv2',
+    limit: '1',
+    countrycodes: 'ru',
+    q: query,
+    viewbox: `${VLADIVOSTOK_BOUNDS.minLon},${VLADIVOSTOK_BOUNDS.maxLat},${VLADIVOSTOK_BOUNDS.maxLon},${VLADIVOSTOK_BOUNDS.minLat}`,
+    bounded: '1',
+  });
+
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+    headers: { 'User-Agent': 'obedi-vl/1.0 (server)' },
+    signal: AbortSignal.timeout(7000),
+  });
+
+  if (!response.ok) return null;
+  const data = await response.json().catch(() => null);
+  const first = Array.isArray(data) ? data[0] : null;
+  if (!first || typeof first !== 'object') return null;
+
+  const lat = Number(first.lat);
+  const lon = Number(first.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (!isWithinVladivostokBounds(lat, lon)) return null;
+
+  const displayName = String(first.display_name || '').slice(0, 200);
+  return { lat, lon, displayName };
+};
+
+const osrmDistanceKm = async (from, to) => {
+  const url = `https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=false&alternatives=false&steps=false`;
+  const response = await fetch(url, { signal: AbortSignal.timeout(7000) });
+  if (!response.ok) return null;
+
+  const data = await response.json().catch(() => null);
+  const meters = data?.routes?.[0]?.distance;
+  if (typeof meters !== 'number' || !Number.isFinite(meters) || meters <= 0) return null;
+  return Math.max(0, Math.round((meters / 1000) * 10) / 10);
+};
+
+const resolveDeliveryZone = async (address) => {
+  const addressKey = String(address || '').trim().toLowerCase();
+  if (!addressKey) return normalizeAddressZone({ found: false, formattedAddress: '', distance: 0, zone: null });
+
+  const cached = getCachedDeliveryZone(addressKey);
+  if (cached) return cached;
+
+  try {
+    const geo = await geocodeAddress(address);
+    if (!geo) {
+      const result = normalizeAddressZone({ found: false, formattedAddress: '', distance: 0, zone: null });
+      setCachedDeliveryZone(addressKey, result);
+      return result;
+    }
+
+    const distance = await osrmDistanceKm(RESTAURANT_COORDS, { lat: geo.lat, lon: geo.lon });
+    if (distance === null) {
+      const result = normalizeAddressZone({ found: false, formattedAddress: geo.displayName, distance: 0, zone: null });
+      setCachedDeliveryZone(addressKey, result);
+      return result;
+    }
+
+    const result = normalizeAddressZone({ found: true, formattedAddress: geo.displayName, distance, zone: null });
+    setCachedDeliveryZone(addressKey, result);
+    return result;
+  } catch (e) {
+    console.warn('Delivery zone lookup failed:', e);
+    const result = normalizeAddressZone({ found: false, formattedAddress: '', distance: 0, zone: null });
+    setCachedDeliveryZone(addressKey, result);
+    return result;
+  }
 };
 
 const hashString = (value) => {
@@ -733,6 +835,25 @@ app.post(
 
     pushOrderForUser(req.user.id, order);
     res.json({ order });
+  })
+);
+
+app.post(
+  '/api/delivery/address-zone',
+  asyncHandler(async (req, res) => {
+    const address = typeof req.body?.address === 'string' ? req.body.address.trim() : '';
+    if (!address) {
+      res.json({ found: false, formattedAddress: '', distance: 0, zone: null });
+      return;
+    }
+
+    if (address.length > 200) {
+      res.status(400).json({ error: 'Invalid address' });
+      return;
+    }
+
+    const result = await resolveDeliveryZone(address);
+    res.json(result);
   })
 );
 

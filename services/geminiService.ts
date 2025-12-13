@@ -70,7 +70,7 @@ export const getChefRecommendation = async (
 
 export const checkAddressZone = async (address: string): Promise<ZoneResult> => {
   try {
-    const result = await postJson<unknown>(`${API_BASE}/ai/address-zone`, { address });
+    const result = await postJson<unknown>(`${API_BASE}/delivery/address-zone`, { address });
     return normalizeZoneResult(result);
   } catch (e) {
     console.error('Zone check error:', e);

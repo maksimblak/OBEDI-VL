@@ -134,6 +134,8 @@ export default function App() {
 
         if (sharedCart.length > 0) {
           setCart(sharedCart);
+          setIsCheckoutOpen(false);
+          setIsUpsellOpen(false);
           setIsCartOpen(true);
         }
 
@@ -160,6 +162,8 @@ export default function App() {
       }
       return [...prev, { ...item, quantity: 1 }];
     });
+    setIsCheckoutOpen(false);
+    setIsUpsellOpen(false);
     setIsCartOpen(true);
   }, []);
 
@@ -194,6 +198,8 @@ export default function App() {
       
       return updatedCart;
     });
+    setIsCheckoutOpen(false);
+    setIsUpsellOpen(false);
     setIsCartOpen(true);
   }, []);
 
@@ -211,6 +217,8 @@ export default function App() {
   const handleRepeatOrder = () => {
     if (lastOrder) {
       setCart(lastOrder.items);
+      setIsCheckoutOpen(false);
+      setIsUpsellOpen(false);
       setIsCartOpen(true);
       setLastOrder(null); // Hide notification
     }
@@ -246,9 +254,11 @@ export default function App() {
 
     if (hasSoup && hasMain && !hasDrink && morsItem) {
       setUpsellItem(morsItem);
+      setIsCheckoutOpen(false);
       setIsUpsellOpen(true);
       setIsCartOpen(false); // Close cart sidebar to focus on modal
     } else {
+      setIsUpsellOpen(false);
       setIsCartOpen(false);
       setIsCheckoutOpen(true);
     }
@@ -261,11 +271,7 @@ export default function App() {
       addToCartSilently(discountedItem);
       setIsUpsellOpen(false);
       setIsCartOpen(false);
-      
-      // Small delay to let the user see the addition or transition smoothly
-      setTimeout(() => {
-        setIsCheckoutOpen(true);
-      }, 300);
+      setIsCheckoutOpen(true);
     }
   };
 
@@ -382,7 +388,7 @@ export default function App() {
             )}
 
             <button 
-              onClick={() => setIsCartOpen(true)}
+                       onClick={() => { setIsCheckoutOpen(false); setIsUpsellOpen(false); setIsCartOpen(true); }}
               className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-full font-medium hover:bg-white/20 hover:border-white/30 transition-all active:scale-95 group shadow-lg shadow-black/20"
             >
               <ShoppingBag size={18} className="group-hover:text-fuchsia-300 transition-colors" />
@@ -847,7 +853,7 @@ export default function App() {
         <UpsellModal 
           item={upsellItem}
           discountPrice={UPSELL_PRICE}
-          onClose={() => { setIsUpsellOpen(false); setIsCartOpen(true); }}
+          onClose={() => { setIsUpsellOpen(false); setIsCheckoutOpen(false); setIsCartOpen(true); }}
           onAdd={handleAcceptUpsell}
           onSkip={handleSkipUpsell}
         />
