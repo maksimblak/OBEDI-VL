@@ -10,7 +10,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ZXOnH0tCap8945EdVxDQgg
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+**Prerequisites:** Node.js + Python 3.12+ + Poetry
 
 
 1. Install dependencies:
@@ -25,8 +25,8 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ZXOnH0tCap8945EdVxDQgg
    - `SMS_PROVIDER=console` (default) prints OTP codes to the API server console (dev)
    - `SMS_PROVIDER=smsru` + `SMS_RU_API_ID=...` to send real SMS via sms.ru
 3. Run the API server (handles auth/orders/delivery and keeps keys off the client):
-   - Node (existing): `npm run api`
-   - Python (FastAPI + SQLite + SQLAlchemy): `npm run api:py` (requires Poetry; config in `backend/pyproject.toml`)
+   - Python (FastAPI + SQLite + SQLAlchemy): `npm run api` (or `npm run api:py`)
+   - Legacy Node (optional): `npm run api:node`
 4. Run the app:
    `npm run dev`
 
@@ -42,5 +42,5 @@ Open: `http://localhost:3000` (API: `http://localhost:3001/api/health`).
 ### Production (single server)
 
 1. Build: `npm run build`
-2. Start API + static web: `npm start`
+2. Start API + static web (Python): `npm start` (legacy Node: `npm run start:node`)
 3. Open: `http://localhost:3001`

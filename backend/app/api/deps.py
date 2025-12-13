@@ -6,8 +6,11 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..core.settings import settings
 from ..db.models import User
+from ..services.ai_service import AiService
 from ..services.auth_service import AuthService, OtpRateLimiter
 from ..services.delivery_service import DeliveryService
+from ..services.evotor_auth import EvotorWebhookAuth
+from ..services.evotor_service import EvotorService
 from ..services.errors import UnauthorizedError
 from ..services.order_service import OrderService
 from ..services.sms import SmsSender
@@ -23,6 +26,18 @@ def get_otp_rate_limiter(request: Request) -> OtpRateLimiter:
 
 def get_delivery_service(request: Request) -> DeliveryService:
     return request.app.state.delivery_service
+
+
+def get_ai_service(request: Request) -> AiService:
+    return request.app.state.ai_service
+
+
+def get_evotor_auth(request: Request) -> EvotorWebhookAuth:
+    return request.app.state.evotor_auth
+
+
+def get_evotor_service(request: Request) -> EvotorService:
+    return request.app.state.evotor_service
 
 
 def get_auth_service(
@@ -44,3 +59,10 @@ def require_user(request: Request, auth_service: AuthService = Depends(get_auth_
         raise UnauthorizedError()
     return user
 
+
+def require_evotor_webhook_auth(
+    request: Request,
+    auth: EvotorWebhookAuth = Depends(get_evotor_auth),
+) -> None:
+    if not auth.is_authorized(request.headers.get('authorization')):
+        raise UnauthorizedError()
