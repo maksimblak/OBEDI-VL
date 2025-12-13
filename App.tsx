@@ -104,7 +104,7 @@ export default function App() {
       if (cancelled) return;
       setUser(currentUser);
 
-      const last = historyService.getLastOrder(currentUser?.id);
+      const last = await historyService.getLastOrder(currentUser?.id);
       if (last) setLastOrder(last);
     })();
 
@@ -276,9 +276,9 @@ export default function App() {
   };
   // --- UPSELL LOGIC END ---
 
-  const handleCheckoutComplete = () => {
+  const handleCheckoutComplete = async () => {
     const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const order = historyService.saveOrder(cart, total, user?.id);
+    const order = await historyService.saveOrder(cart, total, user?.id);
     setLastOrder(order);
     
     setCart([]); // Clear cart
@@ -289,9 +289,9 @@ export default function App() {
     }, 2000);
   };
 
-  const handleLoginSuccess = (loggedInUser: User) => {
+  const handleLoginSuccess = async (loggedInUser: User) => {
       setUser(loggedInUser);
-      const last = historyService.getLastOrder(loggedInUser.id);
+      const last = await historyService.getLastOrder(loggedInUser.id);
       if (last) setLastOrder(last);
   };
 

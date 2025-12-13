@@ -22,6 +22,8 @@ const ENV_LOCAL_PATH = path.join(__dirname, '.env.local');
 const getEvotorCloudToken = () => (process.env.EVOTOR_CLOUD_TOKEN || process.env.EVOTOR_TOKEN || '').trim();
 const getEvotorStoreUuid = () => (process.env.STORE_UUID || '').trim();
 const getEvotorWebhookAuthToken = () => (process.env.EVOTOR_WEBHOOK_AUTH_TOKEN || '').trim();
+const getEvotorWebhookBasicUser = () => (process.env.EVOTOR_WEBHOOK_BASIC_USER || '').trim();
+const getEvotorWebhookBasicPass = () => (process.env.EVOTOR_WEBHOOK_BASIC_PASS || '').trim();
 
 const normalizeEnvValue = (value) => {
   if (typeof value !== 'string') return '';
@@ -83,11 +85,50 @@ const timingSafeEqualString = (a, b) => {
   }
 };
 
-const isEvotorWebhookAuthorized = (authorizationHeader, expectedToken) => {
-  if (!expectedToken) return true;
+const parseBasicAuthHeader = (authorizationHeader) => {
+  if (typeof authorizationHeader !== 'string') return null;
+  const header = authorizationHeader.trim();
+  const match = /^Basic\s+(.+)$/i.exec(header);
+  if (!match) return null;
+
+  const encoded = match[1].trim();
+  if (!encoded) return null;
+
+  let decoded = '';
+  try {
+    decoded = Buffer.from(encoded, 'base64').toString('utf8');
+  } catch {
+    return null;
+  }
+
+  const separatorIndex = decoded.indexOf(':');
+  if (separatorIndex < 0) return null;
+
+  const username = decoded.slice(0, separatorIndex);
+  const password = decoded.slice(separatorIndex + 1);
+
+  return { username, password };
+};
+
+const isEvotorWebhookAuthorized = (authorizationHeader) => {
   const header = typeof authorizationHeader === 'string' ? authorizationHeader.trim() : '';
 
-  const expected = expectedToken.trim();
+  const basicUser = getEvotorWebhookBasicUser();
+  const basicPass = getEvotorWebhookBasicPass();
+  const basicConfigured = Boolean(basicUser || basicPass);
+
+  if (basicConfigured) {
+    if (!basicUser || !basicPass) return false;
+
+    const parsed = parseBasicAuthHeader(header);
+    if (!parsed) return false;
+
+    if (!timingSafeEqualString(parsed.username, basicUser)) return false;
+    if (!timingSafeEqualString(parsed.password, basicPass)) return false;
+    return true;
+  }
+
+  const expected = getEvotorWebhookAuthToken();
   if (!expected) return true;
 
   const variants = new Set([expected, `Bearer ${expected}`]);
@@ -174,7 +215,7 @@ const withCors = (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.status(204).end();
@@ -329,6 +370,8 @@ const sessionsByToken = new Map(); // token -> { userPhone, expiresAt }
 
 const USERS_DIR = path.join(__dirname, 'server-data');
 const USERS_FILE = path.join(USERS_DIR, 'users.json');
+const ORDERS_FILE = path.join(USERS_DIR, 'orders.json');
+const MAX_ORDERS_PER_USER = 50;
 
 if (!fs.existsSync(USERS_DIR)) fs.mkdirSync(USERS_DIR, { recursive: true });
 
@@ -353,6 +396,41 @@ const saveUsers = (users) => {
 };
 
 let usersByPhone = loadUsers(); // { "+7...": User }
+
+const loadOrders = () => {
+  try {
+    if (!fs.existsSync(ORDERS_FILE)) return {};
+    const raw = fs.readFileSync(ORDERS_FILE, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed;
+  } catch {
+    return {};
+  }
+};
+
+const saveOrders = (ordersByUserId) => {
+  try {
+    fs.writeFileSync(ORDERS_FILE, JSON.stringify(ordersByUserId, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Failed to save orders:', e);
+  }
+};
+
+let ordersByUserId = loadOrders(); // { userId: Order[] }
+
+const getOrdersForUser = (userId) => {
+  const orders = ordersByUserId[userId];
+  return Array.isArray(orders) ? orders : [];
+};
+
+const pushOrderForUser = (userId, order) => {
+  const existing = getOrdersForUser(userId);
+  const next = [order, ...existing].slice(0, MAX_ORDERS_PER_USER);
+  ordersByUserId[userId] = next;
+  saveOrders(ordersByUserId);
+  return order;
+};
 
 const getOrCreateUser = (phone) => {
   const existing = usersByPhone[phone];
@@ -606,6 +684,58 @@ app.patch(
   })
 );
 
+app.get(
+  '/api/orders',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const orders = getOrdersForUser(req.user.id);
+    res.json({ orders });
+  })
+);
+
+app.post(
+  '/api/orders',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const rawItems = Array.isArray(req.body?.items) ? req.body.items : [];
+
+    const items = rawItems
+      .slice(0, 100)
+      .map((raw) => {
+        if (!raw || typeof raw !== 'object') return null;
+        const maybe = raw;
+
+        const id = typeof maybe.id === 'string' ? maybe.id : '';
+        const title = typeof maybe.title === 'string' ? maybe.title : '';
+        const price = Number(maybe.price || 0);
+        const quantity = Math.max(1, Math.min(99, Math.floor(Number(maybe.quantity || 1))));
+
+        if (!id || !title || !Number.isFinite(price) || price < 0) return null;
+        return { ...maybe, id, title, price, quantity };
+      })
+      .filter(Boolean);
+
+    if (items.length === 0) {
+      res.status(400).json({ error: 'Empty order' });
+      return;
+    }
+
+    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    const order = {
+      id: `${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
+      userId: req.user.id,
+      date: new Date().toISOString(),
+      items,
+      total,
+      status: 'pending',
+    };
+
+    pushOrderForUser(req.user.id, order);
+    res.json({ order });
+  })
+);
+
 app.post(
   '/api/ai/recommendation',
   asyncHandler(async (req, res) => {
@@ -728,8 +858,7 @@ Return:
 app.post(
   '/api/v1/user/token',
   asyncHandler(async (req, res) => {
-    const webhookAuthToken = getEvotorWebhookAuthToken();
-    const authorized = isEvotorWebhookAuthorized(req.headers.authorization, webhookAuthToken);
+    const authorized = isEvotorWebhookAuthorized(req.headers.authorization);
     if (!authorized) {
       res.status(401).json({ error: 'Unauthorized' });
       return;

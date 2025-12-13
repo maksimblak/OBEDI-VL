@@ -20,8 +20,16 @@ export const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, user,
 
   useEffect(() => {
     if (isOpen) {
-      setOrders(historyService.getOrders(user.id));
+      let cancelled = false;
+      (async () => {
+        const nextOrders = await historyService.getOrders(user.id);
+        if (cancelled) return;
+        setOrders(nextOrders);
+      })();
       setEditName(user.name);
+      return () => {
+        cancelled = true;
+      };
     }
   }, [isOpen, user]);
 
