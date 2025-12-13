@@ -18,12 +18,17 @@ const DIST_DIR = path.join(__dirname, 'dist');
 const PORT = Number(process.env.PORT || 3001);
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const ENV_LOCAL_PATH = path.join(__dirname, '.env.local');
+const EVOTOR_TOKEN_STORE_PATH = process.env.EVOTOR_TOKEN_STORE_PATH
+  ? path.resolve(__dirname, String(process.env.EVOTOR_TOKEN_STORE_PATH))
+  : path.join(__dirname, '.evotor', 'tokens.json');
+const EVOTOR_V2_MIME = 'application/vnd.evotor.v2+json';
 
 const getEvotorCloudToken = () => (process.env.EVOTOR_CLOUD_TOKEN || process.env.EVOTOR_TOKEN || '').trim();
 const getEvotorStoreUuid = () => (process.env.STORE_UUID || '').trim();
 const getEvotorWebhookAuthToken = () => (process.env.EVOTOR_WEBHOOK_AUTH_TOKEN || '').trim();
 const getEvotorWebhookBasicUser = () => (process.env.EVOTOR_WEBHOOK_BASIC_USER || '').trim();
 const getEvotorWebhookBasicPass = () => (process.env.EVOTOR_WEBHOOK_BASIC_PASS || '').trim();
+const getEvotorStoreId = () => (process.env.EVOTOR_STORE_ID || '').trim();
 
 const normalizeEnvValue = (value) => {
   if (typeof value !== 'string') return '';
@@ -143,6 +148,15 @@ const isEvotorWebhookAuthorized = (authorizationHeader) => {
   return false;
 };
 
+const requireEvotorWebhookAuth = (req, res, next) => {
+  const authorized = isEvotorWebhookAuthorized(req.headers.authorization);
+  if (!authorized) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  next();
+};
+
 const fetchWithTimeout = async (url, options, timeoutMs = 8000) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -152,6 +166,81 @@ const fetchWithTimeout = async (url, options, timeoutMs = 8000) => {
   } finally {
     clearTimeout(timeoutId);
   }
+};
+
+const ensureParentDir = async (filePath) => {
+  await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+};
+
+const readJsonFile = async (filePath) => {
+  try {
+    const content = await fs.promises.readFile(filePath, 'utf8');
+    return JSON.parse(content);
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  }
+};
+
+const writeJsonFile = async (filePath, value) => {
+  await ensureParentDir(filePath);
+  const normalized = JSON.stringify(value, null, 2).replace(/\n?$/, '\n');
+  await fs.promises.writeFile(filePath, normalized, 'utf8');
+};
+
+const normalizeEvotorWebhookPayload = (body) => {
+  const payload = body && typeof body === 'object' ? body : {};
+
+  const userIdCandidates = [payload.userId, payload.user_id, payload.userUUID, payload.userUuid, payload.ownerId];
+  const tokenCandidates = [payload.token, payload.cloudToken, payload.appToken, payload.applicationToken];
+
+  const userId = userIdCandidates.find((v) => typeof v === 'string' && v.trim().length > 0);
+  const token = tokenCandidates.find((v) => typeof v === 'string' && v.trim().length > 0);
+
+  return {
+    userId: typeof userId === 'string' ? userId.trim() : '',
+    token: typeof token === 'string' ? token.trim() : '',
+  };
+};
+
+const readEvotorTokenStore = async () => {
+  const data = await readJsonFile(EVOTOR_TOKEN_STORE_PATH);
+  if (!data || typeof data !== 'object') return { users: {} };
+
+  const users = data.users && typeof data.users === 'object' ? data.users : {};
+  return { ...data, users };
+};
+
+const upsertEvotorUserToken = async ({ userId, token, storeId = '', storeUuid = '' }) => {
+  const normalizedUserId = String(userId || '').trim() || 'default';
+  const normalizedToken = String(token || '').trim();
+  if (!normalizedToken) throw new Error('token is required');
+
+  const store = await readEvotorTokenStore();
+  const existing = store.users[normalizedUserId] && typeof store.users[normalizedUserId] === 'object' ? store.users[normalizedUserId] : {};
+
+  store.users[normalizedUserId] = {
+    ...existing,
+    token: normalizedToken,
+    storeId: String(storeId || existing.storeId || '').trim(),
+    storeUuid: String(storeUuid || existing.storeUuid || '').trim(),
+    receivedAt: new Date().toISOString(),
+  };
+
+  await writeJsonFile(EVOTOR_TOKEN_STORE_PATH, store);
+  return store.users[normalizedUserId];
+};
+
+const resolveEvotorCloudToken = async (req) => {
+  const queryUserId = typeof req.query.userId === 'string' ? req.query.userId.trim() : '';
+  if (!queryUserId) return getEvotorCloudToken();
+
+  const store = await readEvotorTokenStore();
+  const record = store.users[queryUserId];
+  if (!record || typeof record !== 'object') return '';
+
+  const token = typeof record.token === 'string' ? record.token.trim() : '';
+  return token;
 };
 
 const fetchEvotorStores = async (cloudToken) => {
@@ -169,6 +258,55 @@ const fetchEvotorStores = async (cloudToken) => {
 
   const data = await response.json();
   return Array.isArray(data) ? data : data?.items || [];
+};
+
+const fetchEvotorCloudJson = async (url, cloudToken, options = {}) => {
+  const token = String(cloudToken || '').trim();
+  if (!token) throw new Error('Evotor cloud token is required');
+
+  const request = async (headers) => {
+    const response = await fetchWithTimeout(url, {
+      method: options.method || 'GET',
+      headers: {
+        Accept: EVOTOR_V2_MIME,
+        'Content-Type': EVOTOR_V2_MIME,
+        ...headers,
+        ...(options.headers || {}),
+      },
+    });
+    return response;
+  };
+
+  const authHeader = token.toLowerCase().startsWith('bearer ') ? token : `Bearer ${token}`;
+
+  let response = await request({ Authorization: authHeader });
+  if (!response.ok && (response.status === 401 || response.status === 403)) {
+    response = await request({ 'x-authorization': token });
+  }
+
+  if (!response.ok) {
+    const details = await response.text().catch(() => '');
+    throw new Error(`Evotor Cloud request failed (${response.status}): ${details.slice(0, 300)}`);
+  }
+
+  return await response.json();
+};
+
+const fetchEvotorCloudStores = async (cloudToken) => {
+  const data = await fetchEvotorCloudJson('https://api.evotor.ru/stores', cloudToken);
+  return Array.isArray(data) ? data : [];
+};
+
+const fetchEvotorCloudProducts = async (cloudToken, storeId, { cursor, since } = {}) => {
+  const normalizedStoreId = String(storeId || '').trim();
+  if (!normalizedStoreId) throw new Error('storeId is required');
+
+  const url = new URL(`https://api.evotor.ru/stores/${encodeURIComponent(normalizedStoreId)}/products`);
+  if (typeof cursor === 'string' && cursor.trim()) url.searchParams.set('cursor', cursor.trim());
+  if (typeof since === 'string' && since.trim()) url.searchParams.set('since', since.trim());
+  if (typeof since === 'number' && Number.isFinite(since)) url.searchParams.set('since', String(Math.trunc(since)));
+
+  return await fetchEvotorCloudJson(url.toString(), cloudToken);
 };
 const SMS_PROVIDER = (process.env.SMS_PROVIDER || 'console').toLowerCase();
 const SMS_RU_API_ID = process.env.SMS_RU_API_ID || '';
@@ -985,13 +1123,14 @@ app.post(
       return;
     }
 
-    const userId = typeof req.body?.userId === 'string' ? req.body.userId.trim() : '';
-    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    const { userId, token } = normalizeEvotorWebhookPayload(req.body);
 
     if (!token) {
       res.status(400).json({ error: 'token is required' });
       return;
     }
+
+    await upsertEvotorUserToken({ userId, token });
 
     process.env.EVOTOR_CLOUD_TOKEN = token;
     await upsertEnvVar(ENV_LOCAL_PATH, 'EVOTOR_CLOUD_TOKEN', token);
@@ -1003,20 +1142,43 @@ app.post(
     }
 
     let storeUuid = getEvotorStoreUuid();
-    if (!storeUuid) {
+    let storeId = getEvotorStoreId();
+    if (!storeUuid || !storeId) {
       try {
-        const stores = await fetchEvotorStores(token);
-        if (stores.length === 1 && stores[0]?.uuid) {
-          storeUuid = String(stores[0].uuid);
-          process.env.STORE_UUID = storeUuid;
-          await upsertEnvVar(ENV_LOCAL_PATH, 'STORE_UUID', storeUuid);
+        const stores = await fetchEvotorCloudStores(token);
+        if (stores.length === 1) {
+          const only = stores[0] || {};
+          if (!storeId && (typeof only?.id === 'string' || typeof only?.id === 'number')) {
+            storeId = String(only.id);
+            process.env.EVOTOR_STORE_ID = storeId;
+            await upsertEnvVar(ENV_LOCAL_PATH, 'EVOTOR_STORE_ID', storeId);
+          }
+          if (!storeUuid && typeof only?.uuid === 'string' && only.uuid.trim()) {
+            storeUuid = only.uuid.trim();
+            process.env.STORE_UUID = storeUuid;
+            await upsertEnvVar(ENV_LOCAL_PATH, 'STORE_UUID', storeUuid);
+          }
         }
       } catch (error) {
-        console.error('Evotor store auto-detect failed:', error);
+        try {
+          const stores = await fetchEvotorStores(token);
+          if (!storeUuid && stores.length === 1 && stores[0]?.uuid) {
+            storeUuid = String(stores[0].uuid);
+            process.env.STORE_UUID = storeUuid;
+            await upsertEnvVar(ENV_LOCAL_PATH, 'STORE_UUID', storeUuid);
+          }
+        } catch (fallbackError) {
+          console.error('Evotor store auto-detect failed:', error);
+          console.error('Evotor store auto-detect fallback failed:', fallbackError);
+        }
       }
     }
 
-    res.json({ ok: true, userId: userId || null, storeUuid: storeUuid || null });
+    if (storeUuid || storeId) {
+      await upsertEvotorUserToken({ userId, token, storeId, storeUuid });
+    }
+
+    res.json({ ok: true, userId: userId || null, storeId: storeId || null, storeUuid: storeUuid || null });
   })
 );
 
@@ -1038,6 +1200,50 @@ app.get(
       .filter((store) => Boolean(store.uuid));
 
     res.json(normalized);
+  })
+);
+
+app.get(
+  '/api/evotor/cloud/stores',
+  requireEvotorWebhookAuth,
+  asyncHandler(async (_req, res) => {
+    const token = await resolveEvotorCloudToken(_req);
+    if (!token) {
+      res.status(400).json({ error: 'Evotor cloud token is not configured' });
+      return;
+    }
+
+    const stores = await fetchEvotorCloudStores(token);
+    res.json(stores);
+  })
+);
+
+app.get(
+  '/api/evotor/cloud/stores/:storeId/products',
+  requireEvotorWebhookAuth,
+  asyncHandler(async (req, res) => {
+    const token = await resolveEvotorCloudToken(req);
+    if (!token) {
+      res.status(400).json({ error: 'Evotor cloud token is not configured' });
+      return;
+    }
+
+    const storeId = typeof req.params.storeId === 'string' ? req.params.storeId.trim() : '';
+    if (!storeId) {
+      res.status(400).json({ error: 'storeId is required' });
+      return;
+    }
+
+    const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
+    const sinceParam = typeof req.query.since === 'string' ? req.query.since.trim() : '';
+    const since = sinceParam ? Number(sinceParam) : undefined;
+
+    const products = await fetchEvotorCloudProducts(token, storeId, {
+      cursor,
+      since: Number.isFinite(since) ? since : sinceParam || undefined,
+    });
+
+    res.json(products);
   })
 );
 
