@@ -33,6 +33,18 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ZXOnH0tCap8945EdVxDQgg
 
 Open: `http://localhost:3000` (API: `http://localhost:3001/api/health`).
 
+## Run with Docker (recommended if you hate multiple terminals)
+
+**Dev (2 services: Vite + FastAPI):**
+
+- `docker compose up --build`
+- Open: `http://localhost:3000`
+
+**Prod (1 service: Python serves `dist/`):**
+
+- `docker compose -f docker-compose.prod.yml up --build`
+- Open: `http://localhost:3001`
+
 ## Evotor token webhook + Cloud API proxy
 
 - Webhook endpoint: `POST http://localhost:3001/api/v1/user/token` (deploy behind HTTPS as `https://<yourserver.ru>/api/v1/user/token`)

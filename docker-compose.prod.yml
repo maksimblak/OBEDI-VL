@@ -1,0 +1,15 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=sqlite:////data/app.db
+      - EVOTOR_TOKEN_STORE_PATH=/data/evotor/tokens.json
+    volumes:
+      - app_data:/data
+
+volumes:
+  app_data:
