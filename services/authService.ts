@@ -1,117 +1,77 @@
 import { User } from '../types';
 
-const USER_STORAGE_KEY = 'obedi_vl_user';
-const USER_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const API_BASE = '/api';
 
-type UserEnvelopeV1 = {
-  v: 1;
-  expiresAt: number;
-  value: User;
-};
+type ApiErrorBody = { error?: string; retryAfterMs?: number };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
-const isUser = (value: unknown): value is User => {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value.id === 'string' &&
-    typeof value.phone === 'string' &&
-    typeof value.name === 'string' &&
-    typeof value.loyaltyPoints === 'number' &&
-    typeof value.joinedDate === 'string'
-  );
-};
-
-const isUserEnvelopeV1 = (value: unknown): value is UserEnvelopeV1 => {
-  if (!isRecord(value)) return false;
-  return value.v === 1 && typeof value.expiresAt === 'number' && isUser(value.value);
-};
-
-const readUserFromStorage = (): User | null => {
-  const raw = localStorage.getItem(USER_STORAGE_KEY);
-  if (!raw) return null;
-
+const readErrorBody = async (response: Response): Promise<ApiErrorBody | null> => {
   try {
-    const parsed: unknown = JSON.parse(raw);
-
-    // New format (envelope with TTL)
-    if (isUserEnvelopeV1(parsed)) {
-      if (Date.now() > parsed.expiresAt) {
-        localStorage.removeItem(USER_STORAGE_KEY);
-        return null;
-      }
-      return parsed.value;
-    }
-
-    // Legacy format (plain user)
-    if (isUser(parsed)) {
-      writeUserToStorage(parsed);
-      return parsed;
-    }
-
-    return null;
+    const json = (await response.json()) as unknown;
+    if (!json || typeof json !== 'object') return null;
+    const maybe = json as Partial<Record<string, unknown>>;
+    return {
+      error: typeof maybe.error === 'string' ? maybe.error : undefined,
+      retryAfterMs: typeof maybe.retryAfterMs === 'number' ? maybe.retryAfterMs : undefined,
+    };
   } catch {
-    localStorage.removeItem(USER_STORAGE_KEY);
     return null;
   }
 };
 
-const writeUserToStorage = (user: User): void => {
-  const envelope: UserEnvelopeV1 = {
-    v: 1,
-    expiresAt: Date.now() + USER_TTL_MS,
-    value: user,
-  };
-  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(envelope));
+const requestJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    const body = await readErrorBody(response);
+    const message = body?.error || response.statusText || 'Request failed';
+    const err = new Error(message);
+    (err as Error & { status?: number; retryAfterMs?: number }).status = response.status;
+    if (typeof body?.retryAfterMs === 'number') {
+      (err as Error & { retryAfterMs?: number }).retryAfterMs = body.retryAfterMs;
+    }
+    throw err;
+  }
+
+  return response.json() as Promise<T>;
 };
 
 export const authService = {
-  // Simulate sending SMS
-  sendOtp: async (_phone: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(true), 1500); // Simulate network delay
+  sendOtp: async (phone: string): Promise<void> => {
+    await requestJson<{ ok: true }>(`${API_BASE}/auth/request-otp`, {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
     });
   },
 
-  // Simulate verifying SMS code (Mock code is 0000)
-  verifyOtp: async (phone: string, code: string): Promise<User | null> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (code !== '0000') {
-          resolve(null);
-          return;
-        }
-
-        const existing = readUserFromStorage();
-        if (existing?.phone === phone) {
-          resolve(existing);
-          return;
-        }
-
-        const user: User = {
-          id: phone, // Simple ID based on phone for this demo
-          phone,
-          name: 'Гость', // Default name
-          loyaltyPoints: 150, // Welcome bonus
-          joinedDate: new Date().toISOString(),
-        };
-
-        writeUserToStorage(user);
-        resolve(user);
-      }, 1000);
+  verifyOtp: async (phone: string, code: string): Promise<User> => {
+    const result = await requestJson<{ user: User }>(`${API_BASE}/auth/verify-otp`, {
+      method: 'POST',
+      body: JSON.stringify({ phone, code }),
     });
+    return result.user;
   },
 
-  getCurrentUser: (): User | null => {
-    return readUserFromStorage();
+  getCurrentUser: async (): Promise<User | null> => {
+    const result = await requestJson<{ user: User | null }>(`${API_BASE}/auth/me`, { method: 'GET' });
+    return result.user;
   },
 
-  updateProfile: (user: User): void => {
-    writeUserToStorage(user);
+  updateProfile: async (name: string): Promise<User> => {
+    const result = await requestJson<{ user: User }>(`${API_BASE}/auth/profile`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    });
+    return result.user;
   },
 
-  logout: (): void => {
-    localStorage.removeItem(USER_STORAGE_KEY);
+  logout: async (): Promise<void> => {
+    await requestJson<{ ok: true }>(`${API_BASE}/auth/logout`, { method: 'POST' });
   },
 };
+

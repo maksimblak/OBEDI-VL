@@ -22,16 +22,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ cart, total, onClo
 
   // Prefill from user profile if available
   useEffect(() => {
-    const user = authService.getCurrentUser();
-    if (user) {
-        setName(user.name);
-        setPhone(user.phone);
-    }
+    let cancelled = false;
+    (async () => {
+      const user = await authService.getCurrentUser().catch(() => null);
+      if (!user || cancelled) return;
+      setName(user.name);
+      setPhone(user.phone);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (phone.length < 10) {
+    if (phone.replace(/\D/g, '').length < 10) {
         alert("Пожалуйста, введите корректный номер телефона");
         return;
     }

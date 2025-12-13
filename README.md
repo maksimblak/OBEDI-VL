@@ -17,7 +17,8 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ZXOnH0tCap8945EdVxDQgg
    `npm install`
 2. Copy `.env.example` to `.env.local` and set env vars in `.env.local`:
    - `GEMINI_API_KEY=...` (required for AI features)
-   - `EVOTOR_TOKEN=...` and `STORE_UUID=...` (optional, for Evotor menu sync)
+   - `EVOTOR_CLOUD_TOKEN=...` (or `EVOTOR_TOKEN=...`) and `STORE_UUID=...` (optional, for Evotor menu sync)
+   - Optional: set `EVOTOR_WEBHOOK_AUTH_TOKEN=...` to verify Evotor webhook calls to `POST /api/v1/user/token`
 3. Run the API server (keeps keys off the client):
    `npm run api`
 4. Run the app:

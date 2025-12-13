@@ -25,11 +25,16 @@ export const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, user,
     }
   }, [isOpen, user]);
 
-  const handleSaveProfile = () => {
-      const updated = { ...user, name: editName };
-      authService.updateProfile(updated);
-      onUpdateUser(updated);
-      setIsEditing(false);
+  const handleSaveProfile = async () => {
+      const nextName = editName.trim();
+      if (!nextName) return;
+      try {
+        const updated = await authService.updateProfile(nextName);
+        onUpdateUser(updated);
+        setIsEditing(false);
+      } catch (e) {
+        console.error('Failed to update profile:', e);
+      }
   };
 
   return (

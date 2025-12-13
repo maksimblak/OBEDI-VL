@@ -96,14 +96,17 @@ export default function App() {
   // Load init state
   useEffect(() => {
     const shareParam = new URLSearchParams(window.location.search).get('share');
+    let cancelled = false;
 
     // Check auth
-    const currentUser = authService.getCurrentUser();
-    setUser(currentUser);
+    (async () => {
+      const currentUser = await authService.getCurrentUser().catch(() => null);
+      if (cancelled) return;
+      setUser(currentUser);
 
-    // Check history
-    const last = historyService.getLastOrder(currentUser?.id);
-    if (last) setLastOrder(last);
+      const last = historyService.getLastOrder(currentUser?.id);
+      if (last) setLastOrder(last);
+    })();
 
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
@@ -141,7 +144,10 @@ export default function App() {
     
     fetchMenu();
 
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const addToCart = useCallback((item: MenuItem) => {
@@ -289,8 +295,8 @@ export default function App() {
       if (last) setLastOrder(last);
   };
 
-  const handleLogout = () => {
-      authService.logout();
+  const handleLogout = async () => {
+      await authService.logout().catch(() => undefined);
       setUser(null);
       setIsProfileOpen(false);
   };

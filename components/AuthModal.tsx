@@ -28,16 +28,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLoginSuccess })
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (phone.length < 10) {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10) {
         setError('Введите корректный номер');
         return;
     }
     setIsLoading(true);
     setError('');
-    
-    await authService.sendOtp(phone);
-    setIsLoading(false);
-    setStep('otp');
+
+    try {
+      await authService.sendOtp(phone);
+      setStep('otp');
+    } catch (e) {
+      const err = e as Error & { retryAfterMs?: number };
+      const retry = typeof err.retryAfterMs === 'number' ? Math.ceil(err.retryAfterMs / 1000) : null;
+      setError(retry ? `Too many requests. Try again in ${retry}s.` : err.message || 'Failed to send code');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOtpSubmit = async (e: React.FormEvent) => {
@@ -45,7 +53,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLoginSuccess })
     setIsLoading(true);
     setError('');
 
-    const user = await authService.verifyOtp(phone, otp);
+    let user: User | null = null;
+    try {
+      user = await authService.verifyOtp(phone, otp);
+    } catch {
+      user = null;
+    }
     if (user) {
         onLoginSuccess(user);
         onClose();
@@ -107,9 +120,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLoginSuccess })
                  <div className="flex justify-center gap-2">
                      <input 
                         type="text" 
-                        maxLength={4}
+                        maxLength={6}
                         value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         className="w-32 bg-white/5 border border-white/10 rounded-xl px-2 py-4 text-center text-3xl text-white tracking-[1em] focus:border-indigo-500 outline-none transition"
                         autoFocus
                      />
@@ -118,7 +131,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onLoginSuccess })
                  
                  <button 
                     type="submit"
-                    disabled={isLoading || otp.length !== 4}
+                    disabled={isLoading || otp.replace(/\D/g, '').length !== 6}
                     className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-500 transition-all flex items-center justify-center gap-2"
                 >
                     {isLoading ? <Loader2 className="animate-spin" /> : <>Войти <KeyRound size={18} /></>}
