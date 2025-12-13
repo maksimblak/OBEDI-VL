@@ -22,3 +22,5 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ZXOnH0tCap8945EdVxDQgg
    `npm run api`
 4. Run the app:
    `npm run dev`
+
+Open: `http://localhost:3000` (API: `http://localhost:3001/api/health`).

@@ -1,15 +1,23 @@
-import http from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import express from 'express';
+import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+dotenv.config({ path: path.join(__dirname, '.env.local') });
+dotenv.config({ path: path.join(__dirname, '.env') });
+
 const DIST_DIR = path.join(__dirname, 'dist');
+
 const PORT = Number(process.env.PORT || 3001);
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const EVOTOR_TOKEN = process.env.EVOTOR_TOKEN || '';
+const STORE_UUID = process.env.STORE_UUID || '';
 
 const FALLBACK_IMAGE =
   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000&auto=format&fit=crop';
@@ -37,48 +45,19 @@ RULES:
 MENU CONTEXT:
 `.trim();
 
-const setCors = (req, res) => {
+const withCors = (req, res, next) => {
   const origin = req.headers.origin || '*';
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-};
 
-const sendJson = (res, statusCode, data) => {
-  res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify(data));
-};
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
 
-const sendText = (res, statusCode, text) => {
-  res.writeHead(statusCode, { 'Content-Type': 'text/plain; charset=utf-8' });
-  res.end(text);
-};
-
-const readJsonBody = async (req, limitBytes = 1_000_000) => {
-  return new Promise((resolve, reject) => {
-    let total = 0;
-    const chunks = [];
-
-    req.on('data', (chunk) => {
-      total += chunk.length;
-      if (total > limitBytes) {
-        reject(new Error('Payload too large'));
-        req.destroy();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on('end', () => {
-      try {
-        const raw = Buffer.concat(chunks).toString('utf8');
-        resolve(raw ? JSON.parse(raw) : {});
-      } catch (e) {
-        reject(e);
-      }
-    });
-    req.on('error', reject);
-  });
+  next();
 };
 
 const normalizeAddressZone = (input) => {
@@ -92,21 +71,17 @@ const normalizeAddressZone = (input) => {
   const distanceRaw = typeof maybe.distance === 'number' && Number.isFinite(maybe.distance) ? maybe.distance : 0;
   const distance = Math.max(0, Math.round(distanceRaw * 10) / 10);
 
-  let zone = maybe.zone === 'green' || maybe.zone === 'yellow' || maybe.zone === 'red' ? maybe.zone : null;
-
   const zoneFromDistance = distance <= 4 ? 'green' : distance <= 8 ? 'yellow' : distance <= 15 ? 'red' : null;
 
   if (!found) {
     return { found: false, formattedAddress, distance: 0, zone: null };
   }
 
-  zone = zoneFromDistance;
-
   return {
     found: true,
     formattedAddress,
     distance,
-    zone,
+    zone: zoneFromDistance,
   };
 };
 
@@ -167,125 +142,96 @@ const mapEvotorToMenuItem = (product) => {
   };
 };
 
-const serveStaticFromDist = async (pathname, res) => {
-  const safePath = pathname.replace(/\\/g, '/');
-  const requested = safePath === '/' ? '/index.html' : safePath;
-  const filePath = path.join(DIST_DIR, requested);
-
-  try {
-    const st = await stat(filePath);
-    if (!st.isFile()) throw new Error('Not a file');
-
-    const ext = path.extname(filePath).toLowerCase();
-    const mime =
-      ext === '.html'
-        ? 'text/html; charset=utf-8'
-        : ext === '.js' || ext === '.mjs'
-          ? 'text/javascript; charset=utf-8'
-          : ext === '.css'
-            ? 'text/css; charset=utf-8'
-            : ext === '.json'
-              ? 'application/json; charset=utf-8'
-              : ext === '.svg'
-                ? 'image/svg+xml'
-                : ext === '.png'
-                  ? 'image/png'
-                  : ext === '.jpg' || ext === '.jpeg'
-                    ? 'image/jpeg'
-                    : ext === '.webp'
-                      ? 'image/webp'
-                      : ext === '.ico'
-                        ? 'image/x-icon'
-                        : 'application/octet-stream';
-
-    const content = await readFile(filePath);
-    res.writeHead(200, { 'Content-Type': mime });
-    res.end(content);
-    return true;
-  } catch {
-    return false;
-  }
+const asyncHandler = (handler) => {
+  return (req, res, next) => {
+    Promise.resolve(handler(req, res, next)).catch(next);
+  };
 };
 
-const server = http.createServer(async (req, res) => {
-  try {
-    setCors(req, res);
+const app = express();
+app.disable('x-powered-by');
+app.use(express.json({ limit: '1mb' }));
+app.use(withCors);
 
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204);
-      res.end();
+app.get('/api/health', (_req, res) => {
+  res.json({
+    ok: true,
+    geminiConfigured: Boolean(GEMINI_API_KEY),
+    evotorConfigured: Boolean(EVOTOR_TOKEN && STORE_UUID),
+  });
+});
+
+app.post(
+  '/api/ai/recommendation',
+  asyncHandler(async (req, res) => {
+    if (!GEMINI_API_KEY) {
+      res.status(501).json({ error: 'GEMINI_API_KEY is not configured' });
       return;
     }
 
-    const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-
-    if (url.pathname === '/api/health') {
-      sendJson(res, 200, { ok: true });
+    const message = typeof req.body?.message === 'string' ? req.body.message : '';
+    if (!message.trim()) {
+      res.status(400).json({ error: 'message is required' });
       return;
     }
 
-    if (url.pathname === '/api/ai/recommendation' && req.method === 'POST') {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        sendJson(res, 501, { error: 'GEMINI_API_KEY is not configured' });
-        return;
-      }
+    const historyRaw = Array.isArray(req.body?.history) ? req.body.history : [];
+    const menuItemsRaw = Array.isArray(req.body?.menuItems) ? req.body.menuItems : [];
 
-      const body = await readJsonBody(req);
-      const message = typeof body.message === 'string' ? body.message : '';
-      const history = Array.isArray(body.history) ? body.history : [];
-      const menuItems = Array.isArray(body.menuItems) ? body.menuItems : [];
+    const history = historyRaw
+      .slice(-20)
+      .map((h) => ({
+        role: h?.role === 'user' ? 'user' : 'model',
+        text: String(h?.text || '').replace(/\|\|REC_ID:.*?\|\|/g, ''),
+      }))
+      .filter((h) => h.text.trim().length > 0);
 
-      const trimmedHistory = history
-        .slice(-20)
-        .map((h) => ({
-          role: h?.role === 'user' ? 'user' : 'model',
-          text: String(h?.text || '').replace(/\|\|REC_ID:.*?\|\|/g, ''),
-        }))
-        .filter((h) => h.text.trim().length > 0);
+    const menuContext = menuItemsRaw
+      .slice(0, 300)
+      .map((item) => {
+        const id = String(item?.id || '');
+        const title = String(item?.title || '');
+        const price = Number(item?.price || 0);
+        const calories = Number(item?.calories || 0);
+        const category = String(item?.category || '');
+        const description = String(item?.description || '').slice(0, 160);
+        return `ID:${id} | ${title} | ${price}₽ | ${calories}kcal | Tags: ${category} | Ingred: ${description}`;
+      })
+      .join('\n');
 
-      const menuContext = menuItems
-        .slice(0, 300)
-        .map((item) => {
-          const id = String(item?.id || '');
-          const title = String(item?.title || '');
-          const price = Number(item?.price || 0);
-          const calories = Number(item?.calories || 0);
-          const category = String(item?.category || '');
-          const description = String(item?.description || '').slice(0, 160);
-          return `ID:${id} | ${title} | ${price}₽ | ${calories}kcal | Tags: ${category} | Ingred: ${description}`;
-        })
-        .join('\n');
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    const chat = ai.chats.create({
+      model: 'gemini-2.5-flash',
+      config: {
+        systemInstruction: `${BASE_INSTRUCTION}\n${menuContext}`,
+        temperature: 0.4,
+      },
+      history: history.map((h) => ({
+        role: h.role,
+        parts: [{ text: h.text }],
+      })),
+    });
 
-      const ai = new GoogleGenAI({ apiKey });
-      const chat = ai.chats.create({
-        model: 'gemini-2.5-flash',
-        config: {
-          systemInstruction: `${BASE_INSTRUCTION}\n${menuContext}`,
-          temperature: 0.4,
-        },
-        history: trimmedHistory.map((h) => ({
-          role: h.role,
-          parts: [{ text: h.text }],
-        })),
-      });
+    const result = await chat.sendMessage({ message });
+    res.json({ text: result.text || '' });
+  })
+);
 
-      const result = await chat.sendMessage({ message });
-      sendJson(res, 200, { text: result.text || '' });
+app.post(
+  '/api/ai/address-zone',
+  asyncHandler(async (req, res) => {
+    if (!GEMINI_API_KEY) {
+      res.status(501).json({ error: 'GEMINI_API_KEY is not configured' });
       return;
     }
 
-    if (url.pathname === '/api/ai/address-zone' && req.method === 'POST') {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        sendJson(res, 501, { error: 'GEMINI_API_KEY is not configured' });
-        return;
-      }
+    const address = typeof req.body?.address === 'string' ? req.body.address : '';
+    if (!address.trim()) {
+      res.json({ found: false, formattedAddress: '', distance: 0, zone: null });
+      return;
+    }
 
-      const body = await readJsonBody(req);
-      const address = typeof body.address === 'string' ? body.address : '';
-
-      const prompt = `
+    const prompt = `
 You are the logistics engine for "Obedi VL" in Vladivostok.
 Our Kitchen is at: Ulitsa Nadibaidze 28, Vladivostok.
 
@@ -309,88 +255,93 @@ Return:
   "distance": number,
   "zone": "green" | "yellow" | "red" | null
 }
-      `.trim();
+    `.trim();
 
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          temperature: 0,
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        temperature: 0,
+      },
+    });
+
+    const rawText = response.text || '';
+    let parsed;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      res.json({ found: false, formattedAddress: '', distance: 0, zone: null });
+      return;
+    }
+
+    res.json(normalizeAddressZone(parsed));
+  })
+);
+
+app.get(
+  '/api/evotor/products',
+  asyncHandler(async (_req, res) => {
+    if (!EVOTOR_TOKEN || !STORE_UUID) {
+      res.json([]);
+      return;
+    }
+
+    const response = await fetch(
+      `https://api.evotor.ru/api/v1/inventories/stores/${encodeURIComponent(STORE_UUID)}/products`,
+      {
+        headers: {
+          'X-Authorization': EVOTOR_TOKEN,
+          'Content-Type': 'application/json',
         },
-      });
-
-      const rawText = response.text || '';
-      let parsed;
-      try {
-        parsed = JSON.parse(rawText);
-      } catch {
-        sendJson(res, 200, { found: false, formattedAddress: '', distance: 0, zone: null });
-        return;
       }
+    );
 
-      const normalized = normalizeAddressZone(parsed);
-      sendJson(res, 200, normalized);
+    if (!response.ok) {
+      console.error('Evotor API Error:', response.status, response.statusText);
+      res.json([]);
       return;
     }
 
-    if (url.pathname === '/api/evotor/products' && req.method === 'GET') {
-      const token = process.env.EVOTOR_TOKEN || '';
-      const storeUuid = process.env.STORE_UUID || '';
+    const data = await response.json();
+    const rawItems = Array.isArray(data) ? data : data?.items || [];
 
-      if (!token || !storeUuid) {
-        sendJson(res, 200, []);
-        return;
-      }
+    const items = rawItems
+      .filter((item) => Number(item?.price || 0) > 0)
+      .map(mapEvotorToMenuItem);
 
-      const response = await fetch(
-        `https://api.evotor.ru/api/v1/inventories/stores/${encodeURIComponent(storeUuid)}/products`,
-        {
-          headers: {
-            'X-Authorization': token,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+    res.json(items);
+  })
+);
 
-      if (!response.ok) {
-        console.error('Evotor API Error:', response.status, response.statusText);
-        sendJson(res, 200, []);
-        return;
-      }
+if (fs.existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(DIST_DIR, 'index.html'));
+  });
+}
 
-      const data = await response.json();
-      const rawItems = Array.isArray(data) ? data : data?.items || [];
-
-      const items = rawItems
-        .filter((item) => Number(item?.price || 0) > 0)
-        .map(mapEvotorToMenuItem);
-
-      sendJson(res, 200, items);
-      return;
-    }
-
-    const served = await serveStaticFromDist(url.pathname, res);
-    if (served) return;
-
-    if (url.pathname === '/' || url.pathname === '/index.html') {
-      sendText(
-        res,
-        200,
-        'Backend is running. Build the frontend with "npm run build" (or run Vite dev server) to serve UI.'
-      );
-      return;
-    }
-
-    sendText(res, 404, 'Not Found');
-  } catch (error) {
-    console.error('Server error:', error);
-    sendJson(res, 500, { error: 'Internal Server Error' });
+app.use((req, res) => {
+  if (req.path.startsWith('/api')) {
+    res.status(404).json({ error: 'Not Found' });
+    return;
   }
+
+  res.status(404).send('Not Found');
 });
 
-server.listen(PORT, () => {
+app.use((err, _req, res, _next) => {
+  if (err?.type === 'entity.parse.failed') {
+    res.status(400).json({ error: 'Invalid JSON' });
+    return;
+  }
+
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
+app.listen(PORT, () => {
   console.log(`API server listening on http://localhost:${PORT}`);
 });
-
