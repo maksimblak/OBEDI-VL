@@ -30,7 +30,7 @@ def _load_env_file(path: Path) -> None:
             continue
 
         value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('\"', \"'\")):
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
             value = value[1:-1]
 
         os.environ.setdefault(key, value)
@@ -99,4 +99,3 @@ class Settings:
 
 
 settings = Settings()
-

@@ -8,7 +8,7 @@ from ...utils.time import isoformat_z
 from ..deps import get_order_service, require_user
 from ..schemas import CreateOrderIn
 
-router = APIRouter(prefix='/orders')
+router = APIRouter()
 
 
 def _serialize_order(order: Order) -> dict[str, object]:
@@ -22,13 +22,13 @@ def _serialize_order(order: Order) -> dict[str, object]:
     }
 
 
-@router.get('')
+@router.get('/orders')
 def list_orders(user: User = Depends(require_user), order_service: OrderService = Depends(get_order_service)) -> dict[str, object]:
     orders = order_service.list_orders(user_id=user.id)
     return {'orders': [_serialize_order(order) for order in orders]}
 
 
-@router.post('')
+@router.post('/orders')
 def create_order(
     payload: CreateOrderIn,
     user: User = Depends(require_user),
@@ -36,4 +36,3 @@ def create_order(
 ) -> dict[str, object]:
     order = order_service.create_order(user_id=user.id, items=[item.model_dump() for item in payload.items])
     return {'order': _serialize_order(order)}
-
