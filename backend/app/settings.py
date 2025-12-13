@@ -1,15 +1,44 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 ROOT_DIR = Path(__file__).resolve().parents[2]
 
-load_dotenv(ROOT_DIR / '.env.local')
-load_dotenv(ROOT_DIR / '.env')
+_ENV_KEY_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+
+
+def _load_env_file(path: Path) -> None:
+  try:
+    content = path.read_text(encoding='utf-8')
+  except FileNotFoundError:
+    return
+
+  for raw_line in content.splitlines():
+    line = raw_line.strip()
+    if not line:
+      continue
+    if line.startswith('#'):
+      continue
+    if '=' not in line:
+      continue
+
+    key, value = line.split('=', 1)
+    key = key.strip()
+    if not _ENV_KEY_RE.match(key):
+      continue
+
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+      value = value[1:-1]
+
+    os.environ.setdefault(key, value)
+
+
+_load_env_file(ROOT_DIR / '.env.local')
+_load_env_file(ROOT_DIR / '.env')
 
 
 def _bool_env(name: str, default: bool = False) -> bool:
@@ -58,4 +87,3 @@ class Settings:
 
 
 settings = Settings()
-

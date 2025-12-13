@@ -10,7 +10,7 @@ from fastapi import Request
 
 
 def utc_now() -> datetime:
-  return datetime.now(timezone.utc)
+  return datetime.utcnow()
 
 
 def isoformat_z(value: datetime) -> str:
@@ -18,7 +18,7 @@ def isoformat_z(value: datetime) -> str:
   if dt.tzinfo is None:
     dt = dt.replace(tzinfo=timezone.utc)
   dt = dt.astimezone(timezone.utc)
-  return dt.isoformat().replace('+00:00', 'Z')
+  return dt.isoformat(timespec='milliseconds').replace('+00:00', 'Z')
 
 
 def normalize_phone(raw: object) -> str | None:
@@ -67,4 +67,3 @@ def get_client_ip(request: Request) -> str:
   if forwarded:
     return forwarded.split(',')[0].strip()
   return request.client.host if request.client else 'unknown'
-
