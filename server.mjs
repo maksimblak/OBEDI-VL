@@ -1,5 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 import express from 'express';
@@ -18,6 +19,19 @@ const PORT = Number(process.env.PORT || 3001);
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const EVOTOR_TOKEN = process.env.EVOTOR_TOKEN || '';
 const STORE_UUID = process.env.STORE_UUID || '';
+const SMS_PROVIDER = (process.env.SMS_PROVIDER || 'console').toLowerCase();
+const SMS_RU_API_ID = process.env.SMS_RU_API_ID || '';
+const SMS_SENDER = process.env.SMS_SENDER || 'ObediVL';
+
+const OTP_TTL_MS = Number(process.env.OTP_TTL_MS || 5 * 60 * 1000);
+const OTP_RESEND_COOLDOWN_MS = Number(process.env.OTP_RESEND_COOLDOWN_MS || 30 * 1000);
+const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS || 5);
+const OTP_MAX_REQUESTS_PER_HOUR_PHONE = Number(process.env.OTP_MAX_REQUESTS_PER_HOUR_PHONE || 5);
+const OTP_MAX_REQUESTS_PER_HOUR_IP = Number(process.env.OTP_MAX_REQUESTS_PER_HOUR_IP || 20);
+
+const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'obedi_session';
+const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS || 7 * 24 * 60 * 60 * 1000);
+const COOKIE_SECURE = (process.env.COOKIE_SECURE || '').toLowerCase() === 'true';
 
 const FALLBACK_IMAGE =
   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000&auto=format&fit=crop';
@@ -148,6 +162,171 @@ const asyncHandler = (handler) => {
   };
 };
 
+const normalizePhone = (raw) => {
+  if (typeof raw !== 'string') return null;
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 0) return null;
+
+  // RU-friendly normalization:
+  // - 10 digits: assume local, prefix +7
+  // - 11 digits starting with 8 or 7: normalize to +7XXXXXXXXXX
+  if (digits.length === 10) return `+7${digits}`;
+  if (digits.length === 11 && (digits.startsWith('8') || digits.startsWith('7'))) {
+    return `+7${digits.slice(1)}`;
+  }
+
+  // Generic E.164-ish fallback (up to 15 digits)
+  if (digits.length >= 11 && digits.length <= 15) return `+${digits}`;
+  return null;
+};
+
+const getClientIp = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length > 0) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.ip || 'unknown';
+};
+
+const getCookie = (req, name) => {
+  const header = req.headers.cookie;
+  if (!header) return null;
+  const parts = header.split(';');
+  for (const part of parts) {
+    const [k, ...rest] = part.trim().split('=');
+    if (k === name) return decodeURIComponent(rest.join('='));
+  }
+  return null;
+};
+
+const sha256Hex = (value) => crypto.createHash('sha256').update(value).digest('hex');
+
+const timingSafeEqualHex = (aHex, bHex) => {
+  if (typeof aHex !== 'string' || typeof bHex !== 'string') return false;
+  if (aHex.length !== bHex.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(aHex, 'hex'), Buffer.from(bHex, 'hex'));
+  } catch {
+    return false;
+  }
+};
+
+const otpStoreByPhone = new Map(); // phone -> { codeHash, expiresAt, attemptsLeft }
+const otpRateByPhone = new Map(); // phone -> { count, resetAt, lastSentAt }
+const otpRateByIp = new Map(); // ip -> { count, resetAt }
+
+const sessionsByToken = new Map(); // token -> { userPhone, expiresAt }
+
+const USERS_DIR = path.join(__dirname, 'server-data');
+const USERS_FILE = path.join(USERS_DIR, 'users.json');
+
+if (!fs.existsSync(USERS_DIR)) fs.mkdirSync(USERS_DIR, { recursive: true });
+
+const loadUsers = () => {
+  try {
+    if (!fs.existsSync(USERS_FILE)) return {};
+    const raw = fs.readFileSync(USERS_FILE, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed;
+  } catch {
+    return {};
+  }
+};
+
+const saveUsers = (users) => {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Failed to save users:', e);
+  }
+};
+
+let usersByPhone = loadUsers(); // { "+7...": User }
+
+const getOrCreateUser = (phone) => {
+  const existing = usersByPhone[phone];
+  if (existing && typeof existing === 'object') return existing;
+
+  const user = {
+    id: phone,
+    phone,
+    name: 'Гость',
+    loyaltyPoints: 150,
+    joinedDate: new Date().toISOString(),
+  };
+
+  usersByPhone[phone] = user;
+  saveUsers(usersByPhone);
+  return user;
+};
+
+const updateUser = (phone, patch) => {
+  const user = getOrCreateUser(phone);
+  const updated = { ...user, ...patch };
+  usersByPhone[phone] = updated;
+  saveUsers(usersByPhone);
+  return updated;
+};
+
+const getSessionUser = (req) => {
+  const token = getCookie(req, SESSION_COOKIE_NAME);
+  if (!token) return null;
+
+  const session = sessionsByToken.get(token);
+  if (!session) return null;
+
+  if (Date.now() > session.expiresAt) {
+    sessionsByToken.delete(token);
+    return null;
+  }
+
+  return usersByPhone[session.userPhone] || null;
+};
+
+const requireAuth = (req, res, next) => {
+  const user = getSessionUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  req.user = user;
+  next();
+};
+
+const sendOtp = async (phone, code) => {
+  const text = `Obedi VL: код ${code}. Никому не сообщайте.`;
+
+  if (SMS_PROVIDER === 'console') {
+    console.log(`[OTP][console] ${phone}: ${code}`);
+    return;
+  }
+
+  if (SMS_PROVIDER === 'smsru') {
+    if (!SMS_RU_API_ID) throw new Error('SMS_RU_API_ID is not configured');
+
+    const params = new URLSearchParams({
+      api_id: SMS_RU_API_ID,
+      to: phone.replace(/\D/g, ''),
+      msg: text,
+      json: '1',
+      from: SMS_SENDER,
+    });
+
+    const response = await fetch(`https://sms.ru/sms/send?${params.toString()}`);
+    if (!response.ok) throw new Error(`SMS.RU failed: ${response.status} ${response.statusText}`);
+
+    const data = await response.json().catch(() => null);
+    if (!data || data.status !== 'OK') {
+      throw new Error(`SMS.RU error: ${JSON.stringify(data)}`);
+    }
+
+    return;
+  }
+
+  throw new Error(`Unknown SMS_PROVIDER: ${SMS_PROVIDER}`);
+};
+
 const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
@@ -158,8 +337,164 @@ app.get('/api/health', (_req, res) => {
     ok: true,
     geminiConfigured: Boolean(GEMINI_API_KEY),
     evotorConfigured: Boolean(EVOTOR_TOKEN && STORE_UUID),
+    auth: {
+      smsProvider: SMS_PROVIDER,
+      smsConfigured: SMS_PROVIDER === 'console' ? true : Boolean(SMS_RU_API_ID),
+      cookieSecure: COOKIE_SECURE,
+    },
   });
 });
+
+app.get('/api/auth/me', (req, res) => {
+  const user = getSessionUser(req);
+  res.json({ user: user || null });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const token = getCookie(req, SESSION_COOKIE_NAME);
+  if (token) sessionsByToken.delete(token);
+
+  res.cookie(SESSION_COOKIE_NAME, '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: COOKIE_SECURE,
+    maxAge: 0,
+    path: '/',
+  });
+
+  res.json({ ok: true });
+});
+
+app.post(
+  '/api/auth/request-otp',
+  asyncHandler(async (req, res) => {
+    const phone = normalizePhone(req.body?.phone);
+    if (!phone) {
+      res.status(400).json({ error: 'Invalid phone' });
+      return;
+    }
+
+    const ip = getClientIp(req);
+    const now = Date.now();
+
+    const phoneRate = otpRateByPhone.get(phone) || { count: 0, resetAt: now + 60 * 60 * 1000, lastSentAt: 0 };
+    if (now > phoneRate.resetAt) {
+      phoneRate.count = 0;
+      phoneRate.resetAt = now + 60 * 60 * 1000;
+    }
+
+    const ipRate = otpRateByIp.get(ip) || { count: 0, resetAt: now + 60 * 60 * 1000 };
+    if (now > ipRate.resetAt) {
+      ipRate.count = 0;
+      ipRate.resetAt = now + 60 * 60 * 1000;
+    }
+
+    if (now - phoneRate.lastSentAt < OTP_RESEND_COOLDOWN_MS) {
+      res.status(429).json({ error: 'Too many requests', retryAfterMs: OTP_RESEND_COOLDOWN_MS - (now - phoneRate.lastSentAt) });
+      return;
+    }
+
+    if (phoneRate.count >= OTP_MAX_REQUESTS_PER_HOUR_PHONE || ipRate.count >= OTP_MAX_REQUESTS_PER_HOUR_IP) {
+      res.status(429).json({ error: 'Too many requests' });
+      return;
+    }
+
+    const code = crypto.randomInt(0, 1000000).toString().padStart(6, '0');
+    const codeHash = sha256Hex(`${phone}:${code}`);
+
+    otpStoreByPhone.set(phone, {
+      codeHash,
+      expiresAt: now + OTP_TTL_MS,
+      attemptsLeft: OTP_MAX_ATTEMPTS,
+    });
+
+    phoneRate.count += 1;
+    phoneRate.lastSentAt = now;
+    otpRateByPhone.set(phone, phoneRate);
+
+    ipRate.count += 1;
+    otpRateByIp.set(ip, ipRate);
+
+    try {
+      await sendOtp(phone, code);
+    } catch (e) {
+      console.error('Failed to send OTP:', e);
+      res.status(502).json({ error: 'Failed to send SMS' });
+      return;
+    }
+
+    res.json({ ok: true });
+  })
+);
+
+app.post(
+  '/api/auth/verify-otp',
+  asyncHandler(async (req, res) => {
+    const phone = normalizePhone(req.body?.phone);
+    const codeRaw = typeof req.body?.code === 'string' ? req.body.code : '';
+    const code = codeRaw.replace(/\D/g, '').slice(0, 6);
+
+    if (!phone || code.length !== 6) {
+      res.status(400).json({ error: 'Invalid input' });
+      return;
+    }
+
+    const record = otpStoreByPhone.get(phone);
+    if (!record || Date.now() > record.expiresAt) {
+      otpStoreByPhone.delete(phone);
+      res.status(401).json({ error: 'Invalid code' });
+      return;
+    }
+
+    if (record.attemptsLeft <= 0) {
+      res.status(429).json({ error: 'Too many attempts' });
+      return;
+    }
+
+    const incomingHash = sha256Hex(`${phone}:${code}`);
+    const ok = timingSafeEqualHex(incomingHash, record.codeHash);
+
+    if (!ok) {
+      record.attemptsLeft -= 1;
+      otpStoreByPhone.set(phone, record);
+      res.status(401).json({ error: 'Invalid code' });
+      return;
+    }
+
+    otpStoreByPhone.delete(phone);
+
+    const user = getOrCreateUser(phone);
+
+    const token = crypto.randomBytes(32).toString('base64url');
+    sessionsByToken.set(token, { userPhone: phone, expiresAt: Date.now() + SESSION_TTL_MS });
+
+    res.cookie(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: COOKIE_SECURE,
+      maxAge: SESSION_TTL_MS,
+      path: '/',
+    });
+
+    res.json({ user });
+  })
+);
+
+app.patch(
+  '/api/auth/profile',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    if (!name || name.length > 50) {
+      res.status(400).json({ error: 'Invalid name' });
+      return;
+    }
+
+    const phone = req.user.phone;
+    const updated = updateUser(phone, { name });
+    res.json({ user: updated });
+  })
+);
 
 app.post(
   '/api/ai/recommendation',
