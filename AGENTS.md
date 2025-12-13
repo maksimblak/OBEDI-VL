@@ -31,5 +31,4 @@
 
 ## Security & Configuration Tips
 - Store secrets in `.env.local` (ignored by Git). Required: `GEMINI_API_KEY=...`.
-- `vite.config.ts` exposes `GEMINI_API_KEY` to the client via `process.env.API_KEY` / `process.env.GEMINI_API_KEY`; add new env keys there deliberately and never commit real credentials.
-
+- Secrets are consumed server-side by `server.mjs` (API proxy). Avoid exposing credentials in client bundles.

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   ShoppingBag, 
   Menu as MenuIcon, 
@@ -72,9 +72,31 @@ export default function App() {
   
   // Auth state
   const [user, setUser] = useState<User | null>(null);
+  const shareParamHandledRef = useRef(false);
+
+  const parseShareParam = (value: string): { id: string; quantity: number }[] => {
+    return value
+      .split(',')
+      .map((pair) => {
+        const [idRaw, qtyRaw] = pair.split(':');
+        const id = (idRaw || '').trim();
+        const quantity = Math.max(1, Math.min(99, Math.floor(Number(qtyRaw))));
+        if (!id || !Number.isFinite(quantity)) return null;
+        return { id, quantity };
+      })
+      .filter((v): v is { id: string; quantity: number } => v !== null);
+  };
+
+  const clearShareParamFromUrl = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('share');
+    window.history.replaceState({}, '', url.toString());
+  };
 
   // Load init state
   useEffect(() => {
+    const shareParam = new URLSearchParams(window.location.search).get('share');
+
     // Check auth
     const currentUser = authService.getCurrentUser();
     setUser(currentUser);
@@ -88,12 +110,33 @@ export default function App() {
 
     // Try to fetch from Evotor
     const fetchMenu = async () => {
-       setIsMenuLoading(true);
-       const evotorItems = await evotorService.getProducts();
-       if (evotorItems.length > 0) {
-         setMenuItems(evotorItems);
-       }
-       setIsMenuLoading(false);
+      setIsMenuLoading(true);
+      const evotorItems = await evotorService.getProducts();
+      const finalMenu = evotorItems.length > 0 ? evotorItems : MOCK_MENU;
+
+      if (evotorItems.length > 0) {
+        setMenuItems(evotorItems);
+      }
+
+      setIsMenuLoading(false);
+
+      if (shareParam && !shareParamHandledRef.current) {
+        const parsed = parseShareParam(shareParam);
+        const sharedCart: CartItem[] = parsed
+          .map(({ id, quantity }) => {
+            const item = finalMenu.find((i) => i.id === id);
+            return item ? ({ ...item, quantity } as CartItem) : null;
+          })
+          .filter((v): v is CartItem => v !== null);
+
+        if (sharedCart.length > 0) {
+          setCart(sharedCart);
+          setIsCartOpen(true);
+        }
+
+        shareParamHandledRef.current = true;
+        clearShareParamFromUrl();
+      }
     };
     
     fetchMenu();
@@ -112,6 +155,18 @@ export default function App() {
       return [...prev, { ...item, quantity: 1 }];
     });
     setIsCartOpen(true);
+  }, []);
+
+  const addToCartSilently = useCallback((item: MenuItem) => {
+    setCart(prev => {
+      const existingIndex = prev.findIndex(i => i.id === item.id);
+      if (existingIndex > -1) {
+        const updated = [...prev];
+        updated[existingIndex] = { ...updated[existingIndex], quantity: updated[existingIndex].quantity + 1 };
+        return updated;
+      }
+      return [...prev, { ...item, quantity: 1 }];
+    });
   }, []);
 
   const addMultipleToCart = useCallback((newItems: MenuItem[]) => {
@@ -188,6 +243,7 @@ export default function App() {
       setIsUpsellOpen(true);
       setIsCartOpen(false); // Close cart sidebar to focus on modal
     } else {
+      setIsCartOpen(false);
       setIsCheckoutOpen(true);
     }
   };
@@ -196,8 +252,9 @@ export default function App() {
     if (upsellItem) {
       // Add item with discounted price
       const discountedItem = { ...upsellItem, price: UPSELL_PRICE };
-      addToCart(discountedItem); // Using addToCart logic but we handle UI transitions manually
+      addToCartSilently(discountedItem);
       setIsUpsellOpen(false);
+      setIsCartOpen(false);
       
       // Small delay to let the user see the addition or transition smoothly
       setTimeout(() => {
@@ -208,24 +265,15 @@ export default function App() {
 
   const handleSkipUpsell = () => {
     setIsUpsellOpen(false);
+    setIsCartOpen(false);
     setIsCheckoutOpen(true);
   };
   // --- UPSELL LOGIC END ---
 
   const handleCheckoutComplete = () => {
     const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    historyService.saveOrder(cart, total, user?.id);
-    
-    const tempCart = [...cart];
-    
-    setLastOrder({
-      id: Date.now().toString(),
-      userId: user?.id,
-      date: new Date().toISOString(),
-      items: tempCart,
-      total,
-      status: 'pending'
-    });
+    const order = historyService.saveOrder(cart, total, user?.id);
+    setLastOrder(order);
     
     setCart([]); // Clear cart
     

@@ -22,6 +22,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   onCheckout
 }) => {
   const [copied, setCopied] = useState(false);
+  const [shareError, setShareError] = useState(false);
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   
   // Minimum Order Logic
@@ -30,10 +31,35 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   const progress = Math.min(100, (total / MIN_ORDER_AMOUNT) * 100);
   const isCheckoutDisabled = total < MIN_ORDER_AMOUNT;
 
-  const handleShare = () => {
-    navigator.clipboard.writeText("https://obedivl.ru/cart/share/12345");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const buildShareUrl = () => {
+    const url = new URL(window.location.origin + window.location.pathname);
+    const payload = cart.map(item => `${item.id}:${item.quantity}`).join(',');
+    url.searchParams.set('share', payload);
+    return url.toString();
+  };
+
+  const handleShare = async () => {
+    if (cart.length === 0) return;
+
+    const url = buildShareUrl();
+    setShareError(false);
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Obedi VL', text: 'Корзина', url });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        window.prompt('Скопируйте ссылку на корзину:', url);
+      }
+
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error('Share failed:', e);
+      setShareError(true);
+      setTimeout(() => setShareError(false), 2500);
+    }
   };
 
   return (
@@ -154,7 +180,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                   className="w-full py-2 mb-4 flex items-center justify-center gap-2 text-xs font-medium text-slate-400 hover:text-white transition border border-dashed border-white/10 rounded-lg hover:border-white/20 hover:bg-white/5"
               >
                   {copied ? <Check size={12} /> : <Share2 size={12} />}
-                  {copied ? 'Ссылка скопирована' : 'Поделиться корзиной'}
+                  {shareError ? 'Не удалось поделиться' : copied ? 'Ссылка скопирована' : 'Поделиться корзиной'}
               </button>
             )}
 

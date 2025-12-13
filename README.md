@@ -15,6 +15,10 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ZXOnH0tCap8945EdVxDQgg
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Set env vars in [.env.local](.env.local):
+   - `GEMINI_API_KEY=...` (required for AI features)
+   - `EVOTOR_TOKEN=...` and `STORE_UUID=...` (optional, for Evotor menu sync)
+3. Run the API server (keeps keys off the client):
+   `npm run api`
+4. Run the app:
    `npm run dev`
