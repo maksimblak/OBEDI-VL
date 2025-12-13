@@ -121,9 +121,12 @@ const isEvotorWebhookAuthorized = (authorizationHeader) => {
   const basicUser = getEvotorWebhookBasicUser();
   const basicPass = getEvotorWebhookBasicPass();
   const basicConfigured = Boolean(basicUser || basicPass);
+  const basicReady = Boolean(basicUser && basicPass);
+  const wantsBasic = /^Basic\s+/i.test(header);
 
-  if (basicConfigured) {
-    if (!basicUser || !basicPass) return false;
+  if (wantsBasic) {
+    if (basicConfigured && !basicReady) return false;
+    if (!basicReady) return false;
 
     const parsed = parseBasicAuthHeader(header);
     if (!parsed) return false;
@@ -134,7 +137,10 @@ const isEvotorWebhookAuthorized = (authorizationHeader) => {
   }
 
   const expected = getEvotorWebhookAuthToken();
-  if (!expected) return true;
+  if (!expected) {
+    if (!basicConfigured) return true;
+    return false;
+  }
 
   const variants = new Set([expected, `Bearer ${expected}`]);
   if (expected.toLowerCase().startsWith('bearer ')) {
@@ -233,14 +239,23 @@ const upsertEvotorUserToken = async ({ userId, token, storeId = '', storeUuid = 
 
 const resolveEvotorCloudToken = async (req) => {
   const queryUserId = typeof req.query.userId === 'string' ? req.query.userId.trim() : '';
-  if (!queryUserId) return getEvotorCloudToken();
+  if (queryUserId) {
+    const store = await readEvotorTokenStore();
+    const record = store.users[queryUserId];
+    if (record && typeof record === 'object') {
+      const token = typeof record.token === 'string' ? record.token.trim() : '';
+      if (token) return { token, source: `tokenStore:${queryUserId}` };
+    }
+    return { token: '', source: `tokenStore:${queryUserId}` };
+  }
 
-  const store = await readEvotorTokenStore();
-  const record = store.users[queryUserId];
-  if (!record || typeof record !== 'object') return '';
+  const envToken = getEvotorCloudToken();
+  if (envToken) {
+    const source = (process.env.EVOTOR_CLOUD_TOKEN || '').trim() ? 'env:EVOTOR_CLOUD_TOKEN' : 'env:EVOTOR_TOKEN';
+    return { token: envToken, source };
+  }
 
-  const token = typeof record.token === 'string' ? record.token.trim() : '';
-  return token;
+  return { token: '', source: 'none' };
 };
 
 const fetchEvotorStores = async (cloudToken) => {
@@ -758,6 +773,7 @@ const sendOtp = async (phone, code) => {
 const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false }));
 app.use(withCors);
 
 app.get('/api/health', (_req, res) => {
@@ -1183,6 +1199,49 @@ app.post(
 );
 
 app.get(
+  '/api/evotor/token-status',
+  requireEvotorWebhookAuth,
+  asyncHandler(async (_req, res) => {
+    const resolved = await resolveEvotorCloudToken(_req);
+    const envToken = getEvotorCloudToken();
+    const envStoreId = getEvotorStoreId();
+    const envStoreUuid = getEvotorStoreUuid();
+    const envTokenHash = envToken ? crypto.createHash('sha256').update(envToken).digest('hex') : '';
+
+    const store = await readEvotorTokenStore();
+    const users = Object.entries(store.users).map(([userId, record]) => {
+      const receivedAt = record && typeof record === 'object' && typeof record.receivedAt === 'string' ? record.receivedAt : null;
+      const token = record && typeof record === 'object' && typeof record.token === 'string' ? record.token : '';
+      const tokenHash = token ? crypto.createHash('sha256').update(token).digest('hex') : '';
+
+      return {
+        userId,
+        receivedAt,
+        hasToken: Boolean(token),
+        tokenSha256Prefix: tokenHash ? tokenHash.slice(0, 10) : null,
+        storeId: record && typeof record === 'object' && typeof record.storeId === 'string' ? record.storeId : '',
+        storeUuid: record && typeof record === 'object' && typeof record.storeUuid === 'string' ? record.storeUuid : '',
+      };
+    });
+
+    res.json({
+      ok: true,
+      env: {
+        evotorCloudTokenConfigured: Boolean(envToken),
+        evotorCloudTokenSource: resolved.source,
+        evotorCloudTokenSha256Prefix: envTokenHash ? envTokenHash.slice(0, 10) : null,
+        evotorStoreId: envStoreId || null,
+        storeUuid: envStoreUuid || null,
+      },
+      tokenStore: {
+        path: path.relative(__dirname, EVOTOR_TOKEN_STORE_PATH),
+        users,
+      },
+    });
+  })
+);
+
+app.get(
   '/api/evotor/stores',
   asyncHandler(async (_req, res) => {
     const token = getEvotorCloudToken();
@@ -1207,14 +1266,18 @@ app.get(
   '/api/evotor/cloud/stores',
   requireEvotorWebhookAuth,
   asyncHandler(async (_req, res) => {
-    const token = await resolveEvotorCloudToken(_req);
-    if (!token) {
+    const resolved = await resolveEvotorCloudToken(_req);
+    if (!resolved.token) {
       res.status(400).json({ error: 'Evotor cloud token is not configured' });
       return;
     }
 
-    const stores = await fetchEvotorCloudStores(token);
-    res.json(stores);
+    try {
+      const stores = await fetchEvotorCloudStores(resolved.token);
+      res.json(stores);
+    } catch (error) {
+      res.status(502).json({ error: error?.message || 'Evotor Cloud request failed', tokenSource: resolved.source });
+    }
   })
 );
 
@@ -1222,8 +1285,8 @@ app.get(
   '/api/evotor/cloud/stores/:storeId/products',
   requireEvotorWebhookAuth,
   asyncHandler(async (req, res) => {
-    const token = await resolveEvotorCloudToken(req);
-    if (!token) {
+    const resolved = await resolveEvotorCloudToken(req);
+    if (!resolved.token) {
       res.status(400).json({ error: 'Evotor cloud token is not configured' });
       return;
     }
@@ -1238,12 +1301,16 @@ app.get(
     const sinceParam = typeof req.query.since === 'string' ? req.query.since.trim() : '';
     const since = sinceParam ? Number(sinceParam) : undefined;
 
-    const products = await fetchEvotorCloudProducts(token, storeId, {
-      cursor,
-      since: Number.isFinite(since) ? since : sinceParam || undefined,
-    });
+    try {
+      const products = await fetchEvotorCloudProducts(resolved.token, storeId, {
+        cursor,
+        since: Number.isFinite(since) ? since : sinceParam || undefined,
+      });
 
-    res.json(products);
+      res.json(products);
+    } catch (error) {
+      res.status(502).json({ error: error?.message || 'Evotor Cloud request failed', tokenSource: resolved.source });
+    }
   })
 );
 
