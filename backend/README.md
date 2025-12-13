@@ -3,6 +3,7 @@
 ## Prereqs
 
 - Python 3.12+
+- Poetry (`poetry --version`)
 
 ## Install (Poetry)
 
