@@ -26,7 +26,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ZXOnH0tCap8945EdVxDQgg
    - `SMS_PROVIDER=smsru` + `SMS_RU_API_ID=...` to send real SMS via sms.ru
 3. Run the API server (handles auth/orders/delivery and keeps keys off the client):
    - Node (existing): `npm run api`
-   - Python (FastAPI + SQLite): `npm run api:py` (first run: `python -m pip install -r backend/requirements.txt`)
+   - Python (FastAPI + SQLite + SQLAlchemy): `npm run api:py` (uses Poetry in `backend/pyproject.toml`)
 4. Run the app:
    `npm run dev`
 

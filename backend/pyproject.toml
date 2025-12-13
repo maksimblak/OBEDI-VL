@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "obedi-vl-backend"
+version = "0.1.0"
+description = "Obedi VL API (FastAPI + SQLAlchemy + SQLite)"
+readme = "README.md"
+packages = [{ include = "app" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.124.4"
+uvicorn = { version = "^0.38.0", extras = ["standard"] }
+sqlalchemy = "^2.0.45"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

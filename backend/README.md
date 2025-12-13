@@ -4,10 +4,11 @@
 
 - Python 3.12+
 
-## Install
+## Install (Poetry)
 
 ```bash
-python -m pip install -r backend/requirements.txt
+cd backend
+poetry install
 ```
 
 ## Run (dev)
@@ -15,11 +16,10 @@ python -m pip install -r backend/requirements.txt
 Runs on `http://localhost:3001` to match the Vite proxy in `vite.config.ts`.
 
 ```bash
-python -m uvicorn backend.app.main:app --reload --port 3001
+poetry run uvicorn app.main:app --reload --port 3001
 ```
 
 ## Notes
 
 - SQLite DB file: `backend/app.db` (ignored by git).
 - Env is loaded from `.env.local` / `.env` in the repo root. You can override DB via `DATABASE_URL`.
-
