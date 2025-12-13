@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
 from .api.errors import install_exception_handlers
 from .api.router import api_router
-from .core.database import init_db
 import os
 from pathlib import Path
 
+from .core.logging import setup_logging
 from .core.settings import REPO_DIR, settings
 from .services.ai_service import AiService
 from .services.auth_service import OtpRateLimiter
@@ -18,7 +18,9 @@ from .services.evotor_auth import EvotorWebhookAuth
 from .services.evotor_client import EvotorClient
 from .services.evotor_service import EvotorService
 from .services.evotor_token_store import EvotorTokenStore
+from .services.maintenance_service import MaintenanceService
 from .services.sms import create_sms_sender
+from .core.database import SessionLocal
 
 
 def _install_spa_routes(app: FastAPI) -> None:
@@ -55,6 +57,7 @@ def _install_spa_routes(app: FastAPI) -> None:
 
 
 def create_app() -> FastAPI:
+    setup_logging()
     app = FastAPI(title='Obedi VL API (Python)')
 
     app.add_middleware(
@@ -67,9 +70,37 @@ def create_app() -> FastAPI:
 
     install_exception_handlers(app)
 
+    @app.middleware('http')
+    async def csrf_origin_check(request: Request, call_next):  # type: ignore[no-untyped-def]
+        if not settings.csrf_origin_check:
+            return await call_next(request)
+
+        if request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return await call_next(request)
+
+        if not request.url.path.startswith('/api/'):
+            return await call_next(request)
+
+        if not request.cookies.get(settings.session_cookie_name):
+            return await call_next(request)
+
+        origin = (request.headers.get('origin') or '').strip().rstrip('/')
+        allowed = {item.strip().rstrip('/') for item in settings.cors_origins if item.strip()}
+        if not origin or origin not in allowed:
+            return JSONResponse({'error': 'CSRF blocked'}, status_code=403)
+
+        return await call_next(request)
+
+    maintenance = MaintenanceService(session_factory=SessionLocal)
+    app.state.maintenance_service = maintenance
+
     @app.on_event('startup')
     def _startup() -> None:
-        init_db()
+        maintenance.start_background_cleanup(interval_ms=settings.session_cleanup_interval_ms)
+
+    @app.on_event('shutdown')
+    def _shutdown() -> None:
+        maintenance.stop()
 
     app.state.sms_sender = create_sms_sender(settings)
     app.state.otp_rate_limiter = OtpRateLimiter()

@@ -144,6 +144,8 @@ class AuthService:
         self._otp_codes.delete(phone)
 
         user = self._users.get_or_create_guest(phone, now=now)
+        if settings.session_single_active:
+            self._sessions.delete_for_user(user_id=user.id)
         token = random_session_token()
         expires_at = now + timedelta(milliseconds=settings.session_ttl_ms)
         self._sessions.create(token=token, user_id=user.id, created_at=now, expires_at=expires_at)
@@ -152,21 +154,42 @@ class AuthService:
         self._db.refresh(user)
         return user, token
 
-    def get_user_by_session_token(self, token: str | None) -> User | None:
+    def authenticate_session(self, token: str | None) -> tuple[User | None, str | None]:
         if not token:
-            return None
+            return None, None
 
         session = self._sessions.get(token)
         if not session:
-            return None
+            return None, None
 
         now = utc_now()
         if now > session.expires_at:
             self._sessions.delete(token)
             self._db.commit()
-            return None
+            return None, None
 
-        return self._users.get_by_id(session.user_id)
+        user = self._users.get_by_id(session.user_id)
+        if not user:
+            self._sessions.delete(token)
+            self._db.commit()
+            return None, None
+
+        rotate_after_ms = settings.session_rotate_after_ms
+        if rotate_after_ms > 0:
+            age_ms = int((now - session.created_at).total_seconds() * 1000)
+            if age_ms >= rotate_after_ms:
+                new_token = random_session_token()
+                expires_at = now + timedelta(milliseconds=settings.session_ttl_ms)
+                self._sessions.create(token=new_token, user_id=session.user_id, created_at=now, expires_at=expires_at)
+                self._sessions.delete(token)
+                self._db.commit()
+                return user, new_token
+
+        return user, None
+
+    def get_user_by_session_token(self, token: str | None) -> User | None:
+        user, _rotated = self.authenticate_session(token)
+        return user
 
     def logout(self, token: str | None) -> None:
         if not token:
@@ -183,4 +206,3 @@ class AuthService:
         self._db.commit()
         self._db.refresh(user)
         return user
-

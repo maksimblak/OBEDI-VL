@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from ..db.models import Session as DbSession
@@ -30,3 +31,13 @@ class SessionRepository:
         if session:
             self._db.delete(session)
 
+    def delete_expired(self, *, now: datetime) -> int:
+        result = self._db.execute(delete(DbSession).where(DbSession.expires_at < now))
+        return int(getattr(result, 'rowcount', 0) or 0)
+
+    def delete_for_user(self, *, user_id: str, except_token: str | None = None) -> int:
+        stmt = delete(DbSession).where(DbSession.user_id == user_id)
+        if except_token:
+            stmt = stmt.where(DbSession.token != except_token)
+        result = self._db.execute(stmt)
+        return int(getattr(result, 'rowcount', 0) or 0)

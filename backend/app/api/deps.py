@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import Depends, Request
+from fastapi import Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from ..core.database import get_db
@@ -52,11 +52,22 @@ def get_order_service(db: Session = Depends(get_db)) -> OrderService:
     return OrderService(db=db)
 
 
-def require_user(request: Request, auth_service: AuthService = Depends(get_auth_service)) -> User:
+def require_user(request: Request, response: Response, auth_service: AuthService = Depends(get_auth_service)) -> User:
     token = request.cookies.get(settings.session_cookie_name)
-    user = auth_service.get_user_by_session_token(token)
+    user, rotated_token = auth_service.authenticate_session(token)
     if not user:
         raise UnauthorizedError()
+
+    if rotated_token:
+        response.set_cookie(
+            settings.session_cookie_name,
+            rotated_token,
+            httponly=True,
+            samesite='lax',
+            secure=settings.cookie_secure,
+            max_age=max(0, settings.session_ttl_ms // 1000),
+            path='/',
+        )
     return user
 
 

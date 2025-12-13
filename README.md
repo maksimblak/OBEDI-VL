@@ -27,6 +27,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ZXOnH0tCap8945EdVxDQgg
 3. Run the API server (handles auth/orders/delivery and keeps keys off the client):
    - Python (FastAPI + SQLite + SQLAlchemy): `npm run api` (or `npm run api:py`)
    - Legacy Node (optional): `npm run api:node`
+   - DB migrations are applied automatically on API start; if you already have an old `backend/app.db`, run `npm run db:migrate` once (it will stamp it as migrated).
 4. Run the app:
    `npm run dev`
 

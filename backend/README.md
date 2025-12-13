@@ -12,11 +12,22 @@ cd backend
 poetry install
 ```
 
+## Migrations (Alembic)
+
+Apply migrations:
+
+```bash
+poetry run python -m app.scripts.migrate
+```
+
+If your `backend/app.db` was created before Alembic was introduced, this command will `stamp head` (no schema changes) so future migrations work normally.
+
 ## Run (dev)
 
 Runs on `http://localhost:3001` to match the Vite proxy in `vite.config.ts`.
 
 ```bash
+poetry run python -m app.scripts.migrate
 poetry run uvicorn app.main:app --reload --port 3001
 ```
 
@@ -28,6 +39,7 @@ Build the frontend into `dist/` (from repo root), then run the Python server; it
 cd ..
 npm run build
 cd backend
+poetry run python -m app.scripts.migrate
 poetry run uvicorn app.main:app --host 0.0.0.0 --port 3001
 ```
 

@@ -24,9 +24,19 @@ def _serialize_user(user: User) -> dict[str, object]:
 
 
 @router.get('/me')
-def me(request: Request, auth_service: AuthService = Depends(get_auth_service)) -> dict[str, object]:
+def me(request: Request, response: Response, auth_service: AuthService = Depends(get_auth_service)) -> dict[str, object]:
     token = request.cookies.get(settings.session_cookie_name)
-    user = auth_service.get_user_by_session_token(token)
+    user, rotated_token = auth_service.authenticate_session(token)
+    if rotated_token:
+        response.set_cookie(
+            settings.session_cookie_name,
+            rotated_token,
+            httponly=True,
+            samesite='lax',
+            secure=settings.cookie_secure,
+            max_age=max(0, settings.session_ttl_ms // 1000),
+            path='/',
+        )
     return {'user': _serialize_user(user) if user else None}
 
 
@@ -73,4 +83,3 @@ def profile(
 ) -> dict[str, object]:
     updated = auth_service.update_profile(user, name_raw=payload.name)
     return {'user': _serialize_user(updated)}
-

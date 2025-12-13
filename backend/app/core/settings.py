@@ -79,6 +79,9 @@ class Settings:
     cookie_secure: bool = _bool_env('COOKIE_SECURE', False)
     session_cookie_name: str = os.getenv('SESSION_COOKIE_NAME', 'obedi_session')
     session_ttl_ms: int = _int_env('SESSION_TTL_MS', 7 * 24 * 60 * 60 * 1000)
+    session_rotate_after_ms: int = _int_env('SESSION_ROTATE_AFTER_MS', 24 * 60 * 60 * 1000)
+    session_single_active: bool = _bool_env('SESSION_SINGLE_ACTIVE', False)
+    session_cleanup_interval_ms: int = _int_env('SESSION_CLEANUP_INTERVAL_MS', 5 * 60 * 1000)
 
     otp_ttl_ms: int = _int_env('OTP_TTL_MS', 5 * 60 * 1000)
     otp_resend_cooldown_ms: int = _int_env('OTP_RESEND_COOLDOWN_MS', 30 * 1000)
@@ -94,6 +97,15 @@ class Settings:
 
     delivery_zone_cache_ttl_ms: int = _int_env('DELIVERY_ZONE_CACHE_TTL_MS', 24 * 60 * 60 * 1000)
     nominatim_user_agent: str = os.getenv('NOMINATIM_USER_AGENT', 'obedi-vl/1.0 (server)').strip()
+
+    sqlite_busy_timeout_ms: int = _int_env('SQLITE_BUSY_TIMEOUT_MS', 5000)
+    sqlite_journal_mode: str = os.getenv('SQLITE_JOURNAL_MODE', 'WAL').strip().upper()
+    sqlite_foreign_keys: bool = _bool_env('SQLITE_FOREIGN_KEYS', True)
+
+    trust_proxy_headers: bool = _bool_env('TRUST_PROXY_HEADERS', False)
+    trusted_proxy_ips: str = os.getenv('TRUSTED_PROXY_IPS', '').strip()
+
+    csrf_origin_check: bool = _bool_env('CSRF_ORIGIN_CHECK', False)
 
     cors_origins: list[str] = field(default_factory=_cors_origins)
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from ..db.models import OtpCode
@@ -48,3 +49,6 @@ class OtpCodeRepository:
         if existing:
             self._db.delete(existing)
 
+    def delete_expired(self, *, now: datetime) -> int:
+        result = self._db.execute(delete(OtpCode).where(OtpCode.expires_at < now))
+        return int(getattr(result, 'rowcount', 0) or 0)
