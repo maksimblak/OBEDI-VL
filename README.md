@@ -17,13 +17,18 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ZXOnH0tCap8945EdVxDQgg
    `npm install`
 2. Copy `.env.example` to `.env.local` and set env vars in `.env.local`:
    - `GEMINI_API_KEY=...` (required for AI features)
-   - `EVOTOR_CLOUD_TOKEN=...` (or `EVOTOR_TOKEN=...`) and `STORE_UUID=...` (optional, for Evotor menu sync)
-   - Optional: verify Evotor webhook calls to `POST /api/v1/user/token` via either:
-     - `EVOTOR_WEBHOOK_AUTH_TOKEN=...` (token in `Authorization`, supports both raw and `Bearer ...`)
-     - `EVOTOR_WEBHOOK_BASIC_USER=...` + `EVOTOR_WEBHOOK_BASIC_PASS=...` (Basic Auth)
-3. Run the API server (keeps keys off the client):
+   - `EVOTOR_TOKEN=...` and `STORE_UUID=...` (optional, for Evotor menu sync)
+   - `SMS_PROVIDER=console` (default) prints OTP codes to the API server console (dev)
+   - `SMS_PROVIDER=smsru` + `SMS_RU_API_ID=...` to send real SMS via sms.ru
+3. Run the API server (handles auth/orders/delivery and keeps keys off the client):
    `npm run api`
 4. Run the app:
    `npm run dev`
 
 Open: `http://localhost:3000` (API: `http://localhost:3001/api/health`).
+
+### Production (single server)
+
+1. Build: `npm run build`
+2. Start API + static web: `npm start`
+3. Open: `http://localhost:3001`
