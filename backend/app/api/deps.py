@@ -13,6 +13,7 @@ from ..services.evotor_auth import EvotorWebhookAuth
 from ..services.evotor_service import EvotorService
 from ..services.errors import UnauthorizedError
 from ..services.order_service import OrderService
+from ..services.rate_limiter import FixedWindowRateLimiter
 from ..services.sms import SmsSender
 
 
@@ -38,6 +39,10 @@ def get_evotor_auth(request: Request) -> EvotorWebhookAuth:
 
 def get_evotor_service(request: Request) -> EvotorService:
     return request.app.state.evotor_service
+
+
+def get_rate_limiter(request: Request) -> FixedWindowRateLimiter:
+    return request.app.state.rate_limiter
 
 
 def get_auth_service(

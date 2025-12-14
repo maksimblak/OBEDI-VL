@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .api.errors import install_exception_handlers
 from .api.router import api_router
@@ -19,6 +20,7 @@ from .services.evotor_client import EvotorClient
 from .services.evotor_service import EvotorService
 from .services.evotor_token_store import EvotorTokenStore
 from .services.maintenance_service import MaintenanceService
+from .services.rate_limiter import FixedWindowRateLimiter
 from .services.sms import create_sms_sender
 from .core.database import SessionLocal
 
@@ -60,6 +62,9 @@ def create_app() -> FastAPI:
     setup_logging()
     app = FastAPI(title='Obedi VL API (Python)')
 
+    if settings.allowed_hosts:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -91,6 +96,50 @@ def create_app() -> FastAPI:
 
         return await call_next(request)
 
+    @app.middleware('http')
+    async def security_headers(request: Request, call_next):  # type: ignore[no-untyped-def]
+        response = await call_next(request)
+
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.headers.setdefault('X-Frame-Options', 'DENY')
+        response.headers.setdefault(
+            'Permissions-Policy',
+            'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=()',
+        )
+        response.headers.setdefault('Cross-Origin-Opener-Policy', 'same-origin')
+        response.headers.setdefault('Cross-Origin-Resource-Policy', 'same-origin')
+
+        csp_parts = [
+            "default-src 'self'",
+            "base-uri 'self'",
+            "object-src 'none'",
+            "frame-ancestors 'none'",
+            "form-action 'self'",
+            "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "font-src 'self' https://fonts.gstatic.com data:",
+            "img-src 'self' data: https:",
+            "media-src 'self' https:",
+            "connect-src 'self'",
+        ]
+
+        forwarded_proto = (request.headers.get('x-forwarded-proto') or '').strip().lower()
+        secure_context = settings.cookie_secure or forwarded_proto == 'https' or request.url.scheme == 'https'
+        if secure_context:
+            response.headers.setdefault(
+                'Strict-Transport-Security',
+                'max-age=31536000; includeSubDomains; preload',
+            )
+            csp_parts.append('upgrade-insecure-requests')
+
+        response.headers.setdefault('Content-Security-Policy', '; '.join(csp_parts))
+
+        if request.url.path.startswith('/api/'):
+            response.headers.setdefault('Cache-Control', 'no-store')
+
+        return response
+
     maintenance = MaintenanceService(session_factory=SessionLocal)
     app.state.maintenance_service = maintenance
 
@@ -104,6 +153,7 @@ def create_app() -> FastAPI:
 
     app.state.sms_sender = create_sms_sender(settings)
     app.state.otp_rate_limiter = OtpRateLimiter()
+    app.state.rate_limiter = FixedWindowRateLimiter()
     app.state.ai_service = AiService()
     app.state.delivery_service = DeliveryService(
         cache_ttl_ms=settings.delivery_zone_cache_ttl_ms,

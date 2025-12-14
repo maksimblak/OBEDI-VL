@@ -66,6 +66,12 @@ def _cors_origins() -> list[str]:
     return [origin.strip() for origin in raw.split(',') if origin.strip()]
 
 
+def _allowed_hosts() -> list[str]:
+    raw = os.getenv('ALLOWED_HOSTS', '')
+    hosts = [host.strip() for host in raw.split(',') if host.strip()]
+    return hosts
+
+
 def _default_database_url() -> str:
     db_path = (BACKEND_DIR / 'app.db').resolve()
     return f'sqlite:///{db_path.as_posix()}'
@@ -88,6 +94,12 @@ class Settings:
     otp_max_requests_per_hour_phone: int = _int_env('OTP_MAX_REQUESTS_PER_HOUR_PHONE', 5)
     otp_max_requests_per_hour_ip: int = _int_env('OTP_MAX_REQUESTS_PER_HOUR_IP', 20)
 
+    ai_max_requests_per_minute_ip: int = _int_env('AI_MAX_REQUESTS_PER_MINUTE_IP', 10)
+    ai_max_requests_per_hour_ip: int = _int_env('AI_MAX_REQUESTS_PER_HOUR_IP', 60)
+
+    delivery_max_requests_per_minute_ip: int = _int_env('DELIVERY_MAX_REQUESTS_PER_MINUTE_IP', 30)
+    delivery_max_requests_per_hour_ip: int = _int_env('DELIVERY_MAX_REQUESTS_PER_HOUR_IP', 600)
+
     sms_provider: str = os.getenv('SMS_PROVIDER', 'console').strip().lower()
     sms_ru_api_id: str = os.getenv('SMS_RU_API_ID', '').strip()
     sms_sender: str = os.getenv('SMS_SENDER', 'ObediVL').strip()
@@ -107,6 +119,7 @@ class Settings:
     csrf_origin_check: bool = _bool_env('CSRF_ORIGIN_CHECK', False)
 
     cors_origins: list[str] = field(default_factory=_cors_origins)
+    allowed_hosts: list[str] = field(default_factory=_allowed_hosts)
 
 
 settings = Settings()
