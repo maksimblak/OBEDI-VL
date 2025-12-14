@@ -18,7 +18,7 @@ FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q
 
 
 def _get_env_local_path() -> Path:
-    return REPO_DIR / '.env.local'
+    return REPO_DIR / '.env'
 
 
 def _get_evotor_token_store_path() -> Path:

@@ -38,7 +38,6 @@ def _load_env_file(path: Path) -> None:
 
 def _load_env() -> None:
     for base in (REPO_DIR, BACKEND_DIR):
-        _load_env_file(base / '.env.local')
         _load_env_file(base / '.env')
 
 
