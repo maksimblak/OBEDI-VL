@@ -1,14 +1,25 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 import urllib.parse
 import urllib.request
+import urllib.error
 from dataclasses import dataclass
 
 
 RESTAURANT_COORDS = {'lat': 43.096362, 'lon': 131.916723}
 VLADIVOSTOK_BOUNDS = {'minLat': 42.8, 'maxLat': 43.3, 'minLon': 131.6, 'maxLon': 132.3}
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class GeocodeResult:
+    lat: float
+    lon: float
+    display_name: str
 
 
 @dataclass(frozen=True)
@@ -20,9 +31,20 @@ class ZoneResult:
 
 
 class DeliveryService:
-    def __init__(self, *, cache_ttl_ms: int, user_agent: str) -> None:
+    def __init__(
+        self,
+        *,
+        cache_ttl_ms: int,
+        user_agent: str,
+        geocoder_provider: str = 'photon',
+        nominatim_base_url: str = 'https://nominatim.openstreetmap.org',
+        photon_base_url: str = 'https://photon.komoot.io',
+    ) -> None:
         self._cache_ttl_ms = max(0, int(cache_ttl_ms))
-        self._user_agent = user_agent
+        self._user_agent = (user_agent or '').strip() or 'obedi-vl/1.0 (server)'
+        self._geocoder_provider = self._normalize_geocoder_provider(geocoder_provider)
+        self._nominatim_base_url = (nominatim_base_url or '').strip().rstrip('/') or 'https://nominatim.openstreetmap.org'
+        self._photon_base_url = (photon_base_url or '').strip().rstrip('/') or 'https://photon.komoot.io'
         self._cache: dict[str, tuple[ZoneResult, int]] = {}
 
     def resolve_zone(self, address: str) -> dict[str, object]:
@@ -35,26 +57,27 @@ class DeliveryService:
             return self._serialize(cached)
 
         try:
-            geo = self._geocode_address(address)
-            if not geo:
+            geo, geocode_failed = self._geocode_address(address)
+            if geo is None:
                 result = ZoneResult(found=False, formatted_address='', distance=0, zone=None)
-                self._set_cached(key, result)
+                if not geocode_failed:
+                    self._set_cached(key, result)
                 return self._serialize(result)
 
-            distance = self._osrm_distance_km(RESTAURANT_COORDS, {'lat': geo['lat'], 'lon': geo['lon']})
+            distance, distance_failed = self._osrm_distance_km(RESTAURANT_COORDS, {'lat': geo.lat, 'lon': geo.lon})
             if distance is None:
-                result = ZoneResult(found=False, formatted_address=geo['display_name'], distance=0, zone=None)
-                self._set_cached(key, result)
+                result = ZoneResult(found=False, formatted_address=geo.display_name, distance=0, zone=None)
+                if not distance_failed:
+                    self._set_cached(key, result)
                 return self._serialize(result)
 
             zone = 'green' if distance <= 4 else 'yellow' if distance <= 8 else 'red' if distance <= 15 else None
-            result = ZoneResult(found=True, formatted_address=geo['display_name'], distance=distance, zone=zone)
+            result = ZoneResult(found=True, formatted_address=geo.display_name, distance=distance, zone=zone)
             self._set_cached(key, result)
             return self._serialize(result)
         except Exception:
-            result = ZoneResult(found=False, formatted_address='', distance=0, zone=None)
-            self._set_cached(key, result)
-            return self._serialize(result)
+            logger.exception('Delivery zone lookup failed')
+            return self._serialize(ZoneResult(found=False, formatted_address='', distance=0, zone=None))
 
     def _serialize(self, value: ZoneResult) -> dict[str, object]:
         if not value.found:
@@ -98,7 +121,29 @@ class DeliveryService:
             payload = response.read().decode('utf-8', errors='replace')
             return json.loads(payload or 'null')
 
-    def _geocode_address(self, address: str) -> dict[str, object] | None:
+    def _normalize_geocoder_provider(self, raw_value: str) -> str:
+        value = (raw_value or '').strip().lower()
+        if value in ('nominatim', 'photon', 'auto'):
+            return value
+        return 'photon'
+
+    def _geocode_address(self, address: str) -> tuple[GeocodeResult | None, bool]:
+        if self._geocoder_provider == 'nominatim':
+            return self._geocode_nominatim(address)
+        if self._geocoder_provider == 'photon':
+            return self._geocode_photon(address)
+
+        photon_hit, photon_failed = self._geocode_photon(address)
+        if photon_hit is not None:
+            return photon_hit, False
+
+        nominatim_hit, nominatim_failed = self._geocode_nominatim(address)
+        if nominatim_hit is not None:
+            return nominatim_hit, False
+
+        return None, (photon_failed or nominatim_failed)
+
+    def _geocode_nominatim(self, address: str) -> tuple[GeocodeResult | None, bool]:
         query = f'{address}, Vladivostok'
         params = urllib.parse.urlencode(
             {
@@ -110,42 +155,145 @@ class DeliveryService:
                 'bounded': '1',
             }
         )
-        url = f'https://nominatim.openstreetmap.org/search?{params}'
-        data = self._request_json(url, timeout=7, headers={'User-Agent': self._user_agent})
+        url = f'{self._nominatim_base_url}/search?{params}'
+
+        try:
+            data = self._request_json(url, timeout=7, headers={'User-Agent': self._user_agent})
+        except urllib.error.HTTPError as exc:
+            body = ''
+            try:
+                body = exc.read().decode('utf-8', errors='replace')
+            except Exception:
+                body = ''
+            logger.warning('Nominatim geocoding blocked (%s): %s', exc.code, body[:200])
+            return None, True
+        except Exception:
+            logger.exception('Nominatim geocoding request failed')
+            return None, True
+
         first = data[0] if isinstance(data, list) and len(data) > 0 else None
         if not isinstance(first, dict):
-            return None
+            return None, False
 
         try:
             lat = float(first.get('lat'))
             lon = float(first.get('lon'))
         except (TypeError, ValueError):
-            return None
+            return None, False
 
         if not self._is_within_bounds(lat=lat, lon=lon):
-            return None
+            return None, False
 
         display_name = str(first.get('display_name') or '')[:200]
-        return {'lat': lat, 'lon': lon, 'display_name': display_name}
+        return GeocodeResult(lat=lat, lon=lon, display_name=display_name), False
 
-    def _osrm_distance_km(self, from_: dict[str, float], to: dict[str, float]) -> float | None:
+    def _format_photon_address(self, properties: dict[str, object]) -> str:
+        street = str(properties.get('street') or properties.get('name') or '').strip()
+        house = str(properties.get('housenumber') or '').strip()
+        city = str(properties.get('city') or '').strip()
+        district = str(properties.get('district') or '').strip()
+        state = str(properties.get('state') or '').strip()
+        country = str(properties.get('country') or '').strip()
+
+        first_part = street
+        if street and house:
+            first_part = f'{street}, {house}'
+        elif house and not street:
+            first_part = house
+
+        parts: list[str] = []
+        for part in (first_part, city or district, state, country):
+            if not part:
+                continue
+            if part not in parts:
+                parts.append(part)
+
+        return ', '.join(parts)[:200]
+
+    def _geocode_photon(self, address: str) -> tuple[GeocodeResult | None, bool]:
+        query = f'{address}, Vladivostok'
+        bbox = f"{VLADIVOSTOK_BOUNDS['minLon']},{VLADIVOSTOK_BOUNDS['minLat']},{VLADIVOSTOK_BOUNDS['maxLon']},{VLADIVOSTOK_BOUNDS['maxLat']}"
+        params = urllib.parse.urlencode({'q': query, 'limit': '1', 'bbox': bbox})
+        url = f'{self._photon_base_url}/api/?{params}'
+
+        try:
+            data = self._request_json(url, timeout=7, headers={'User-Agent': self._user_agent})
+        except urllib.error.HTTPError as exc:
+            body = ''
+            try:
+                body = exc.read().decode('utf-8', errors='replace')
+            except Exception:
+                body = ''
+            logger.warning('Photon geocoding failed (%s): %s', exc.code, body[:200])
+            return None, True
+        except Exception:
+            logger.exception('Photon geocoding request failed')
+            return None, True
+
+        if not isinstance(data, dict):
+            return None, False
+
+        features = data.get('features')
+        if not isinstance(features, list) or len(features) == 0:
+            return None, False
+
+        first = features[0]
+        if not isinstance(first, dict):
+            return None, False
+
+        geometry = first.get('geometry')
+        if not isinstance(geometry, dict):
+            return None, False
+
+        coordinates = geometry.get('coordinates')
+        if not isinstance(coordinates, list) or len(coordinates) < 2:
+            return None, False
+
+        lon_raw, lat_raw = coordinates[0], coordinates[1]
+        if not isinstance(lat_raw, (int, float)) or not isinstance(lon_raw, (int, float)):
+            return None, False
+
+        lat = float(lat_raw)
+        lon = float(lon_raw)
+        if not self._is_within_bounds(lat=lat, lon=lon):
+            return None, False
+
+        properties = first.get('properties')
+        properties_dict = properties if isinstance(properties, dict) else {}
+        display_name = self._format_photon_address(properties_dict) or str(address or '').strip()[:200]
+
+        return GeocodeResult(lat=lat, lon=lon, display_name=display_name), False
+
+    def _osrm_distance_km(self, from_: dict[str, float], to: dict[str, float]) -> tuple[float | None, bool]:
         url = (
             'https://router.project-osrm.org/route/v1/driving/'
             f"{from_['lon']},{from_['lat']};{to['lon']},{to['lat']}?overview=false&alternatives=false&steps=false"
         )
-        data = self._request_json(url, timeout=7)
+        try:
+            data = self._request_json(url, timeout=7)
+        except urllib.error.HTTPError as exc:
+            body = ''
+            try:
+                body = exc.read().decode('utf-8', errors='replace')
+            except Exception:
+                body = ''
+            logger.warning('OSRM request failed (%s): %s', exc.code, body[:200])
+            return None, True
+        except Exception:
+            logger.exception('OSRM request failed')
+            return None, True
+
         if not isinstance(data, dict):
-            return None
+            return None, False
         routes = data.get('routes')
         if not isinstance(routes, list) or len(routes) == 0:
-            return None
+            return None, False
         first = routes[0]
         if not isinstance(first, dict):
-            return None
+            return None, False
         meters = first.get('distance')
         if not isinstance(meters, (int, float)) or meters <= 0:
-            return None
+            return None, False
 
         distance_km = float(meters) / 1000
-        return max(0.0, round(distance_km * 10) / 10)
-
+        return max(0.0, round(distance_km * 10) / 10), False

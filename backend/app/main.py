@@ -158,6 +158,9 @@ def create_app() -> FastAPI:
     app.state.delivery_service = DeliveryService(
         cache_ttl_ms=settings.delivery_zone_cache_ttl_ms,
         user_agent=settings.nominatim_user_agent,
+        geocoder_provider=settings.delivery_geocoder_provider,
+        nominatim_base_url=settings.nominatim_base_url,
+        photon_base_url=settings.photon_base_url,
     )
     evotor_auth = EvotorWebhookAuth()
     raw_token_store_path = (os.getenv('EVOTOR_TOKEN_STORE_PATH') or '').strip()

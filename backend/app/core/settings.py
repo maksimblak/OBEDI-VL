@@ -108,6 +108,9 @@ class Settings:
 
     delivery_zone_cache_ttl_ms: int = _int_env('DELIVERY_ZONE_CACHE_TTL_MS', 24 * 60 * 60 * 1000)
     nominatim_user_agent: str = os.getenv('NOMINATIM_USER_AGENT', 'obedi-vl/1.0 (server)').strip()
+    delivery_geocoder_provider: str = os.getenv('DELIVERY_GEOCODER_PROVIDER', 'photon').strip().lower()
+    nominatim_base_url: str = os.getenv('NOMINATIM_BASE_URL', 'https://nominatim.openstreetmap.org').strip().rstrip('/')
+    photon_base_url: str = os.getenv('PHOTON_BASE_URL', 'https://photon.komoot.io').strip().rstrip('/')
 
     sqlite_busy_timeout_ms: int = _int_env('SQLITE_BUSY_TIMEOUT_MS', 5000)
     sqlite_journal_mode: str = os.getenv('SQLITE_JOURNAL_MODE', 'WAL').strip().upper()
