@@ -18,12 +18,16 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ZXOnH0tCap8945EdVxDQgg
 2. Copy `.env.example` to `.env.local` and set env vars in `.env.local`:
    - `GEMINI_API_KEY=...` (required for AI features)
    - `EVOTOR_CLOUD_TOKEN=...` (or legacy `EVOTOR_TOKEN=...`) and `STORE_UUID=...` (optional, for Evotor menu sync)
-   - Optional: verify Evotor webhook calls to `POST /api/v1/user/token` via either:
+   - Recommended (security): protect Evotor webhook/admin endpoints via either:
      - `EVOTOR_WEBHOOK_AUTH_TOKEN=...` (token in `Authorization`, supports both raw and `Bearer ...`)
      - `EVOTOR_WEBHOOK_BASIC_USER=...` + `EVOTOR_WEBHOOK_BASIC_PASS=...` (Basic Auth)
    - Optional: `EVOTOR_TOKEN_STORE_PATH=...` (defaults to `./.evotor/tokens.json`) to persist received Evotor tokens per `userId`
    - `SMS_PROVIDER=console` (default) prints OTP codes to the API server console (dev)
    - `SMS_PROVIDER=smsru` + `SMS_RU_API_ID=...` to send real SMS via sms.ru
+   - Optional hardening:
+     - `CSRF_ORIGIN_CHECK=true` + `CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000` (blocks cross-site state-changing requests when session cookie is present)
+     - `ALLOWED_HOSTS=localhost,127.0.0.1` (enables TrustedHost checks in the Python API)
+     - `AI_MAX_REQUESTS_PER_MINUTE_IP`, `AI_MAX_REQUESTS_PER_HOUR_IP`, `DELIVERY_MAX_REQUESTS_PER_MINUTE_IP`, `DELIVERY_MAX_REQUESTS_PER_HOUR_IP`
 3. Run the API server (handles auth/orders/delivery and keeps keys off the client):
    - Python (FastAPI + SQLite + SQLAlchemy): `npm run api` (or `npm run api:py`)
    - Legacy Node (optional): `npm run api:node`

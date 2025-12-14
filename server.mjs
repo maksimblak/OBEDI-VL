@@ -427,7 +427,7 @@ const withSecurityHeaders = (req, res, next) => {
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
-    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com",
+    "script-src 'self' https://cdn.tailwindcss.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: https:",
@@ -1136,6 +1136,31 @@ app.post(
       return;
     }
 
+    const ip = getClientIp(req);
+    const now = Date.now();
+
+    let retryAfterMs = consumeFixedWindow(
+      `delivery:address-zone:minute:${ip}`,
+      DELIVERY_MAX_REQUESTS_PER_MINUTE_IP,
+      60 * 1000,
+      now
+    );
+    if (retryAfterMs !== null) {
+      res.status(429).json({ error: 'Too many requests', retryAfterMs });
+      return;
+    }
+
+    retryAfterMs = consumeFixedWindow(
+      `delivery:address-zone:hour:${ip}`,
+      DELIVERY_MAX_REQUESTS_PER_HOUR_IP,
+      60 * 60 * 1000,
+      now
+    );
+    if (retryAfterMs !== null) {
+      res.status(429).json({ error: 'Too many requests', retryAfterMs });
+      return;
+    }
+
     const result = await resolveDeliveryZone(address);
     res.json(result);
   })
@@ -1152,6 +1177,36 @@ app.post(
     const message = typeof req.body?.message === 'string' ? req.body.message : '';
     if (!message.trim()) {
       res.status(400).json({ error: 'message is required' });
+      return;
+    }
+
+    if (message.length > 800) {
+      res.status(400).json({ error: 'message is too long' });
+      return;
+    }
+
+    const ip = getClientIp(req);
+    const now = Date.now();
+
+    let retryAfterMs = consumeFixedWindow(
+      `ai:recommendation:minute:${ip}`,
+      AI_MAX_REQUESTS_PER_MINUTE_IP,
+      60 * 1000,
+      now
+    );
+    if (retryAfterMs !== null) {
+      res.status(429).json({ error: 'Too many requests', retryAfterMs });
+      return;
+    }
+
+    retryAfterMs = consumeFixedWindow(
+      `ai:recommendation:hour:${ip}`,
+      AI_MAX_REQUESTS_PER_HOUR_IP,
+      60 * 60 * 1000,
+      now
+    );
+    if (retryAfterMs !== null) {
+      res.status(429).json({ error: 'Too many requests', retryAfterMs });
       return;
     }
 
@@ -1208,6 +1263,31 @@ app.post(
     const address = typeof req.body?.address === 'string' ? req.body.address : '';
     if (!address.trim()) {
       res.json({ found: false, formattedAddress: '', distance: 0, zone: null });
+      return;
+    }
+
+    if (address.length > 200) {
+      res.status(400).json({ error: 'Invalid address' });
+      return;
+    }
+
+    const ip = getClientIp(req);
+    const now = Date.now();
+
+    let retryAfterMs = consumeFixedWindow(
+      `ai:address-zone:minute:${ip}`,
+      AI_MAX_REQUESTS_PER_MINUTE_IP,
+      60 * 1000,
+      now
+    );
+    if (retryAfterMs !== null) {
+      res.status(429).json({ error: 'Too many requests', retryAfterMs });
+      return;
+    }
+
+    retryAfterMs = consumeFixedWindow(`ai:address-zone:hour:${ip}`, AI_MAX_REQUESTS_PER_HOUR_IP, 60 * 60 * 1000, now);
+    if (retryAfterMs !== null) {
+      res.status(429).json({ error: 'Too many requests', retryAfterMs });
       return;
     }
 
@@ -1373,6 +1453,7 @@ app.get(
 
 app.get(
   '/api/evotor/stores',
+  requireEvotorWebhookAuth,
   asyncHandler(async (_req, res) => {
     const token = getEvotorCloudToken();
     if (!token) {
@@ -1446,6 +1527,7 @@ app.get(
 
 app.post(
   '/api/evotor/store',
+  requireEvotorWebhookAuth,
   asyncHandler(async (req, res) => {
     const storeUuid = typeof req.body?.storeUuid === 'string' ? req.body.storeUuid.trim() : '';
     if (!storeUuid) {

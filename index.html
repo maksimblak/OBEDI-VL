@@ -5,58 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Обеды VL | Доставка комплексных обедов</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: '#6366f1', // Indigo-500
-              secondary: '#a855f7', // Purple-500
-              accent: '#d946ef', // Fuchsia-500
-              // Brighter dark theme base (Slate/Blue gray instead of flat gray)
-              dark: '#0f172a', // Slate-900 (Rich Midnight)
-              surface: '#1e293b', // Slate-800 (Lighter surface)
-              highlight: '#334155', // Slate-700
-            },
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
-            animation: {
-              'fade-in': 'fadeIn 0.8s ease-out forwards',
-              'float': 'float 6s ease-in-out infinite',
-              'blob': 'blob 10s infinite',
-              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-              'shine': 'shine 3s linear infinite',
-              'marquee': 'marquee 25s linear infinite',
-            },
-            keyframes: {
-              fadeIn: {
-                '0%': { opacity: '0', transform: 'translateY(20px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              },
-              float: {
-                '0%, 100%': { transform: 'translateY(0)' },
-                '50%': { transform: 'translateY(-10px)' },
-              },
-              blob: {
-                '0%': { transform: 'translate(0px, 0px) scale(1)' },
-                '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-                '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-                '100%': { transform: 'translate(0px, 0px) scale(1)' },
-              },
-              shine: {
-                '0%': { backgroundPosition: '200% center' },
-                '100%': { backgroundPosition: '-200% center' },
-              },
-              marquee: {
-                '0%': { transform: 'translateX(0%)' },
-                '100%': { transform: 'translateX(-100%)' },
-              }
-            }
-          }
-        }
-      }
-    </script>
+    <script src="/tailwind-config.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
       body { font-family: 'Inter', sans-serif; }
@@ -104,17 +53,6 @@
         mix-blend-mode: overlay;
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0"
-  }
-}
-</script>
 </head>
   <body class="bg-dark text-slate-200 antialiased overflow-x-hidden selection:bg-fuchsia-500/40 selection:text-white">
     <div id="root"></div>

@@ -116,7 +116,7 @@ def create_app() -> FastAPI:
             "object-src 'none'",
             "frame-ancestors 'none'",
             "form-action 'self'",
-            "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com",
+            "script-src 'self' https://cdn.tailwindcss.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com data:",
             "img-src 'self' data: https:",

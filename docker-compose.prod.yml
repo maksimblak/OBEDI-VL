@@ -10,6 +10,10 @@ services:
       - EVOTOR_TOKEN_STORE_PATH=/data/evotor/tokens.json
       - COOKIE_SECURE=true
       - TRUST_PROXY_HEADERS=true
+      - TRUSTED_PROXY_IPS=127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      - CSRF_ORIGIN_CHECK=true
+      - CORS_ORIGINS=https://obedi-vl.ru,https://www.obedi-vl.ru
+      - ALLOWED_HOSTS=obedi-vl.ru,www.obedi-vl.ru
     volumes:
       - app_data:/data
     expose:
