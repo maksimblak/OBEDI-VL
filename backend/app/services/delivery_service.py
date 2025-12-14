@@ -49,6 +49,7 @@ class DeliveryService:
         self._nominatim_base_url = (nominatim_base_url or '').strip().rstrip('/') or 'https://nominatim.openstreetmap.org'
         self._photon_base_url = (photon_base_url or '').strip().rstrip('/') or 'https://photon.komoot.io'
         self._cache: dict[str, tuple[ZoneResult, int]] = {}
+        self._osrm_disabled_until_ms: int = 0
 
     def resolve_zone(self, address: str) -> dict[str, object]:
         key = (address or '').strip().lower()
@@ -317,12 +318,15 @@ class DeliveryService:
         return GeocodeResult(lat=lat, lon=lon, display_name=display_name), False
 
     def _osrm_distance_km(self, from_: dict[str, float], to: dict[str, float]) -> tuple[float | None, bool]:
+        if self._now_ms() < self._osrm_disabled_until_ms:
+            return None, True
+
         url = (
             'https://router.project-osrm.org/route/v1/driving/'
             f"{from_['lon']},{from_['lat']};{to['lon']},{to['lat']}?overview=false&alternatives=false&steps=false"
         )
         try:
-            data = self._request_json(url, timeout=7)
+            data = self._request_json(url, timeout=3)
         except urllib.error.HTTPError as exc:
             body = ''
             try:
@@ -330,9 +334,11 @@ class DeliveryService:
             except Exception:
                 body = ''
             logger.warning('OSRM request failed (%s): %s', exc.code, body[:200])
+            self._osrm_disabled_until_ms = self._now_ms() + 5 * 60 * 1000
             return None, True
         except Exception:
             logger.exception('OSRM request failed')
+            self._osrm_disabled_until_ms = self._now_ms() + 5 * 60 * 1000
             return None, True
 
         if not isinstance(data, dict):
