@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from dataclasses import dataclass
@@ -25,6 +26,8 @@ from .errors import (
     TooManyRequestsError,
 )
 from .sms import SmsSender
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -113,6 +116,7 @@ class AuthService:
         try:
             self._sms_sender.send_otp(phone, code)
         except Exception as exc:
+            logger.exception('Failed to send OTP SMS')
             raise SmsSendError() from exc
 
     def verify_otp(self, phone_raw: str, code_raw: str) -> tuple[User, str]:
