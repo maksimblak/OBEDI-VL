@@ -24,16 +24,19 @@ class SmsRuSender:
         self._user_agent = user_agent
 
     def send_otp(self, phone: str, code: str) -> None:
-        text = f'Obedi VL: код {code}. Никому не сообщайте.'
-        params = urllib.parse.urlencode(
-            {
-                'api_id': self._api_id,
-                'to': ''.join(ch for ch in phone if ch.isdigit()),
-                'msg': text,
-                'json': '1',
-                'from': self._sender,
-            }
-        )
+        text = f'Obedi VL: код {code}. Никому не сообщайте этот код.'
+        query: dict[str, str] = {
+            'api_id': self._api_id,
+            'to': ''.join(ch for ch in phone if ch.isdigit()),
+            'msg': text,
+            'json': '1',
+        }
+
+        sender = self._sender.strip()
+        if sender:
+            query['from'] = sender
+
+        params = urllib.parse.urlencode(query)
         url = f'https://sms.ru/sms/send?{params}'
         request = urllib.request.Request(url, headers={'User-Agent': self._user_agent})
         with urllib.request.urlopen(request, timeout=8) as response:
