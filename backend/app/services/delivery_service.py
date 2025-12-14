@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import time
 import urllib.parse
 import urllib.request
@@ -13,6 +14,8 @@ RESTAURANT_COORDS = {'lat': 43.096362, 'lon': 131.916723}
 VLADIVOSTOK_BOUNDS = {'minLat': 42.8, 'maxLat': 43.3, 'minLon': 131.6, 'maxLon': 132.3}
 
 logger = logging.getLogger(__name__)
+
+FALLBACK_DRIVING_DISTANCE_FACTOR = 1.25
 
 
 @dataclass(frozen=True)
@@ -66,9 +69,32 @@ class DeliveryService:
 
             distance, distance_failed = self._osrm_distance_km(RESTAURANT_COORDS, {'lat': geo.lat, 'lon': geo.lon})
             if distance is None:
-                result = ZoneResult(found=False, formatted_address=geo.display_name, distance=0, zone=None)
-                if not distance_failed:
-                    self._set_cached(key, result)
+                fallback_distance = self._fallback_distance_km(RESTAURANT_COORDS, {'lat': geo.lat, 'lon': geo.lon})
+                if fallback_distance is None:
+                    result = ZoneResult(found=False, formatted_address=geo.display_name, distance=0, zone=None)
+                    if not distance_failed:
+                        self._set_cached(key, result)
+                    return self._serialize(result)
+
+                fallback_zone = (
+                    'green'
+                    if fallback_distance <= 4
+                    else 'yellow'
+                    if fallback_distance <= 8
+                    else 'red'
+                    if fallback_distance <= 15
+                    else None
+                )
+                result = ZoneResult(
+                    found=True,
+                    formatted_address=geo.display_name,
+                    distance=fallback_distance,
+                    zone=fallback_zone,
+                )
+
+                fallback_cache_ttl_ms = min(self._cache_ttl_ms, 10 * 60 * 1000) if self._cache_ttl_ms > 0 else 0
+                if fallback_cache_ttl_ms > 0:
+                    self._set_cached(key, result, ttl_ms=fallback_cache_ttl_ms)
                 return self._serialize(result)
 
             zone = 'green' if distance <= 4 else 'yellow' if distance <= 8 else 'red' if distance <= 15 else None
@@ -102,10 +128,11 @@ class DeliveryService:
             return None
         return value
 
-    def _set_cached(self, key: str, value: ZoneResult) -> None:
-        if self._cache_ttl_ms <= 0:
+    def _set_cached(self, key: str, value: ZoneResult, *, ttl_ms: int | None = None) -> None:
+        effective_ttl_ms = self._cache_ttl_ms if ttl_ms is None else max(0, int(ttl_ms))
+        if effective_ttl_ms <= 0:
             return
-        self._cache[key] = (value, self._now_ms() + self._cache_ttl_ms)
+        self._cache[key] = (value, self._now_ms() + effective_ttl_ms)
 
     def _is_within_bounds(self, *, lat: float, lon: float) -> bool:
         return (
@@ -114,6 +141,31 @@ class DeliveryService:
             and lon >= VLADIVOSTOK_BOUNDS['minLon']
             and lon <= VLADIVOSTOK_BOUNDS['maxLon']
         )
+
+    def _fallback_distance_km(self, from_: dict[str, float], to: dict[str, float]) -> float | None:
+        try:
+            lat1 = float(from_['lat'])
+            lon1 = float(from_['lon'])
+            lat2 = float(to['lat'])
+            lon2 = float(to['lon'])
+        except (KeyError, TypeError, ValueError):
+            return None
+
+        distance = self._haversine_km(lat1, lon1, lat2, lon2) * FALLBACK_DRIVING_DISTANCE_FACTOR
+        if not math.isfinite(distance) or distance <= 0:
+            return None
+        return max(0.0, round(distance * 10) / 10)
+
+    def _haversine_km(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        earth_radius_km = 6371.0
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        dphi = math.radians(lat2 - lat1)
+        dlambda = math.radians(lon2 - lon1)
+
+        a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return earth_radius_km * c
 
     def _request_json(self, url: str, *, timeout: int = 8, headers: dict[str, str] | None = None) -> object | None:
         request = urllib.request.Request(url, headers=headers or {'User-Agent': self._user_agent})
