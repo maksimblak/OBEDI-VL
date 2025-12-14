@@ -3,13 +3,31 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "3001:3001"
     environment:
       - DATABASE_URL=sqlite:////data/app.db
       - EVOTOR_TOKEN_STORE_PATH=/data/evotor/tokens.json
+      - COOKIE_SECURE=true
+      - TRUST_PROXY_HEADERS=true
     volumes:
       - app_data:/data
+    expose:
+      - "3001"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
 
 volumes:
   app_data:
+  caddy_data:
+  caddy_config:

@@ -43,7 +43,7 @@ Open: `http://localhost:3000` (API: `http://localhost:3001/api/health`).
 **Prod (1 service: Python serves `dist/`):**
 
 - `docker compose -f docker-compose.prod.yml up --build`
-- Open: `http://localhost:3001`
+- Open: `https://obedi-vl.ru` (ports 80/443 must be open; DNS A-records must point to your server)
 
 ## Evotor token webhook + Cloud API proxy
 
