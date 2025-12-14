@@ -336,8 +336,13 @@ class DeliveryService:
             logger.warning('OSRM request failed (%s): %s', exc.code, body[:200])
             self._osrm_disabled_until_ms = self._now_ms() + 5 * 60 * 1000
             return None, True
+        except TimeoutError as exc:
+            logger.warning('OSRM request timed out: %s', str(exc) or exc.__class__.__name__)
+            self._osrm_disabled_until_ms = self._now_ms() + 5 * 60 * 1000
+            return None, True
         except Exception:
-            logger.exception('OSRM request failed')
+            logger.warning('OSRM request failed')
+            logger.debug('OSRM request exception details', exc_info=True)
             self._osrm_disabled_until_ms = self._now_ms() + 5 * 60 * 1000
             return None, True
 
