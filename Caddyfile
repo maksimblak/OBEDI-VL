@@ -1,0 +1,8 @@
+www.obedi-vl.ru {
+	redir https://obedi-vl.ru{uri} permanent
+}
+
+obedi-vl.ru {
+	encode zstd gzip
+	reverse_proxy app:3001
+}
