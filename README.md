@@ -42,6 +42,7 @@ Open: `http://localhost:3000` (API: `http://localhost:3001/api/health`).
 
 **Prod (1 service: Python serves `dist/`):**
 
+- `cp .env.example .env` and fill values in `.env` (on the server)
 - `docker compose -f docker-compose.prod.yml up --build`
 - Open: `https://obedi-vl.ru` (ports 80/443 must be open; DNS A-records must point to your server)
 

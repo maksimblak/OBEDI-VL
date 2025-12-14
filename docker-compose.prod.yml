@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=sqlite:////data/app.db
       - EVOTOR_TOKEN_STORE_PATH=/data/evotor/tokens.json
