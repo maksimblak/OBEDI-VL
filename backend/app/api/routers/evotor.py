@@ -31,7 +31,10 @@ def evotor_token_status(
 
 
 @router.get('/evotor/stores')
-def evotor_stores(evotor_service: EvotorService = Depends(get_evotor_service)) -> list[dict[str, str]]:
+def evotor_stores(
+    _auth: None = Depends(require_evotor_webhook_auth),
+    evotor_service: EvotorService = Depends(get_evotor_service),
+) -> list[dict[str, str]]:
     try:
         return evotor_service.list_stores()
     except ValueError as exc:
@@ -88,7 +91,11 @@ def evotor_cloud_products(
 
 
 @router.post('/evotor/store')
-def evotor_set_store(payload: dict, evotor_service: EvotorService = Depends(get_evotor_service)) -> dict:
+def evotor_set_store(
+    payload: dict,
+    _auth: None = Depends(require_evotor_webhook_auth),
+    evotor_service: EvotorService = Depends(get_evotor_service),
+) -> dict:
     store_uuid = payload.get('storeUuid') if isinstance(payload, dict) else ''
     try:
         normalized = evotor_service.set_store_uuid(str(store_uuid or ''))
@@ -103,4 +110,3 @@ def evotor_products(evotor_service: EvotorService = Depends(get_evotor_service))
         return evotor_service.products_menu_items()
     except Exception:
         return []
-

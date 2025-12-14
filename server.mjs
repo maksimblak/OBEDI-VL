@@ -337,6 +337,24 @@ const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'obedi_session';
 const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS || 7 * 24 * 60 * 60 * 1000);
 const COOKIE_SECURE = (process.env.COOKIE_SECURE || '').toLowerCase() === 'true';
 
+const TRUST_PROXY_HEADERS = (process.env.TRUST_PROXY_HEADERS || '').toLowerCase() === 'true';
+const TRUSTED_PROXY_IPS = String(process.env.TRUSTED_PROXY_IPS || '').trim();
+
+const CSRF_ORIGIN_CHECK = (process.env.CSRF_ORIGIN_CHECK || '').toLowerCase() === 'true';
+
+const CORS_ORIGINS = String(process.env.CORS_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean)
+  .map((value) => value.replace(/\/$/, ''));
+const corsOriginsSet = new Set(CORS_ORIGINS);
+
+const AI_MAX_REQUESTS_PER_MINUTE_IP = Number(process.env.AI_MAX_REQUESTS_PER_MINUTE_IP || 10);
+const AI_MAX_REQUESTS_PER_HOUR_IP = Number(process.env.AI_MAX_REQUESTS_PER_HOUR_IP || 60);
+
+const DELIVERY_MAX_REQUESTS_PER_MINUTE_IP = Number(process.env.DELIVERY_MAX_REQUESTS_PER_MINUTE_IP || 30);
+const DELIVERY_MAX_REQUESTS_PER_HOUR_IP = Number(process.env.DELIVERY_MAX_REQUESTS_PER_HOUR_IP || 600);
+
 const FALLBACK_IMAGE =
   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000&auto=format&fit=crop';
 
@@ -368,15 +386,86 @@ RULES:
 MENU CONTEXT:
 `.trim();
 
+const normalizeOrigin = (value) => {
+  if (typeof value !== 'string') return '';
+  return value.trim().replace(/\/$/, '');
+};
+
 const withCors = (req, res, next) => {
-  const origin = req.headers.origin || '*';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Vary', 'Origin');
+  const origin = normalizeOrigin(req.headers.origin);
+  if (origin && corsOriginsSet.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.status(204).end();
+    return;
+  }
+
+  next();
+};
+
+const withSecurityHeaders = (req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=()'
+  );
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+
+  const cspParts = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: https:",
+    "media-src 'self' https:",
+    "connect-src 'self'",
+  ];
+
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').trim().toLowerCase();
+  const secureContext = COOKIE_SECURE || forwardedProto === 'https';
+  if (secureContext) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    cspParts.push('upgrade-insecure-requests');
+  }
+
+  res.setHeader('Content-Security-Policy', cspParts.join('; '));
+
+  if (req.path.startsWith('/api')) {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+
+  next();
+};
+
+const csrfOriginCheck = (req, res, next) => {
+  if (!CSRF_ORIGIN_CHECK) return next();
+
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    return next();
+  }
+
+  if (!req.path.startsWith('/api')) return next();
+
+  const token = getCookie(req, SESSION_COOKIE_NAME);
+  if (!token) return next();
+
+  const origin = normalizeOrigin(req.headers.origin);
+  if (!origin || !corsOriginsSet.has(origin)) {
+    res.status(403).json({ error: 'CSRF blocked' });
     return;
   }
 
@@ -587,11 +676,38 @@ const normalizePhone = (raw) => {
 };
 
 const getClientIp = (req) => {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.length > 0) {
-    return forwarded.split(',')[0].trim();
+  const ip = typeof req.ip === 'string' ? req.ip : '';
+  if (ip) return ip;
+
+  const remote = req.socket?.remoteAddress;
+  if (typeof remote === 'string' && remote) return remote;
+
+  return 'unknown';
+};
+
+const rateBuckets = new Map(); // key -> { count, resetAtMs }
+
+const consumeFixedWindow = (key, limit, windowMs, nowMs = Date.now()) => {
+  const normalizedKey = String(key || 'unknown');
+  const normalizedLimit = Number(limit);
+  const normalizedWindowMs = Number(windowMs);
+  if (!Number.isFinite(normalizedLimit) || normalizedLimit <= 0) return null;
+  if (!Number.isFinite(normalizedWindowMs) || normalizedWindowMs <= 0) return null;
+
+  const bucket = rateBuckets.get(normalizedKey) || { count: 0, resetAtMs: nowMs + normalizedWindowMs };
+  if (nowMs > bucket.resetAtMs) {
+    bucket.count = 0;
+    bucket.resetAtMs = nowMs + normalizedWindowMs;
   }
-  return req.ip || 'unknown';
+
+  if (bucket.count >= normalizedLimit) {
+    rateBuckets.set(normalizedKey, bucket);
+    return Math.max(0, bucket.resetAtMs - nowMs);
+  }
+
+  bucket.count += 1;
+  rateBuckets.set(normalizedKey, bucket);
+  return null;
 };
 
 const getCookie = (req, name) => {
@@ -772,9 +888,23 @@ const sendOtp = async (phone, code) => {
 
 const app = express();
 app.disable('x-powered-by');
+
+if (TRUST_PROXY_HEADERS) {
+  if (TRUSTED_PROXY_IPS) {
+    const entries = TRUSTED_PROXY_IPS.split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    app.set('trust proxy', entries);
+  } else {
+    app.set('trust proxy', true);
+  }
+}
+
 app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: '100kb' }));
+app.use(withSecurityHeaders);
 app.use(withCors);
+app.use(csrfOriginCheck);
 
 app.get('/api/health', (_req, res) => {
   res.json({
