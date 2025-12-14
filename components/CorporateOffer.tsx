@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Building2, HardHat, Warehouse, Factory, Clapperboard, Award, ChefHat, FileCheck, Thermometer, Briefcase } from 'lucide-react';
+import { FALLBACK_IMAGE, IMAGES } from '../data';
 
 interface CorporateOfferProps {
   onRequestOffer: () => void;
@@ -119,8 +120,13 @@ export const CorporateOffer: React.FC<CorporateOfferProps> = ({ onRequestOffer }
               {/* Image Side */}
               <div className="lg:w-2/5 relative min-h-[300px] lg:min-h-full overflow-hidden">
                  <img 
-                   src="corporate.jpg" 
-                   alt="Корпоративное питание" 
+                   src={IMAGES.catering1}
+                   alt="Корпоративное питание"
+                   onError={(e) => {
+                     const target = e.target as HTMLImageElement;
+                     target.src = FALLBACK_IMAGE;
+                     target.onerror = null;
+                   }}
                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                  />
                  {/* Gradient Overlay - Smooth transition from dark background to image */}
