@@ -2,6 +2,7 @@
 name = "obedi-vl-backend"
 version = "0.1.0"
 description = "Obedi VL API (FastAPI + SQLAlchemy + SQLite)"
+authors = ["Obedi VL"]
 readme = "README.md"
 packages = [{ include = "app" }]
 

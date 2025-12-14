@@ -20,6 +20,7 @@ WORKDIR /app/backend
 RUN pip install --no-cache-dir "poetry==${POETRY_VERSION}"
 
 COPY backend/pyproject.toml backend/poetry.lock ./
+COPY backend/README.md ./
 RUN poetry install --no-ansi --no-root
 
 COPY backend/ ./
