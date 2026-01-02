@@ -57,3 +57,14 @@ class Order(Base):
     total: Mapped[float] = mapped_column(Float, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)
 
+
+class RateLimit(Base):
+    __tablename__ = 'rate_limits'
+    __table_args__ = (
+        Index('ix_rate_limits_reset_at', 'reset_at_ms'),
+    )
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    count: Mapped[int] = mapped_column(Integer, nullable=False)
+    reset_at_ms: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+

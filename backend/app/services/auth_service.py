@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import logging
-import threading
 import time
-from dataclasses import dataclass
 from datetime import timedelta
 
 from sqlalchemy.orm import Session
@@ -25,60 +23,50 @@ from .errors import (
     TooManyAttemptsError,
     TooManyRequestsError,
 )
+from .rate_limiter import FixedWindowRateLimiter
 from .sms import SmsSender
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class _PhoneRate:
-    count: int
-    reset_at_ms: int
-    last_sent_at_ms: int
-
-
-@dataclass
-class _IpRate:
-    count: int
-    reset_at_ms: int
-
-
 class OtpRateLimiter:
-    def __init__(self) -> None:
-        self._lock = threading.Lock()
-        self._rate_by_phone: dict[str, _PhoneRate] = {}
-        self._rate_by_ip: dict[str, _IpRate] = {}
+    """
+    Database-backed OTP rate limiter.
+    Works across multiple processes.
+    """
+    def __init__(self, db: Session) -> None:
+        self._limiter = FixedWindowRateLimiter(db)
 
     def consume(self, *, phone: str, ip: str, now_ms: int) -> None:
-        with self._lock:
-            phone_rate = self._rate_by_phone.get(phone) or _PhoneRate(
-                count=0, reset_at_ms=now_ms + 60 * 60 * 1000, last_sent_at_ms=0
-            )
-            if now_ms > phone_rate.reset_at_ms:
-                phone_rate.count = 0
-                phone_rate.reset_at_ms = now_ms + 60 * 60 * 1000
+        # Check IP rate limit (per hour)
+        ip_retry = self._limiter.consume(
+            key=f'otp:ip:{ip}',
+            limit=settings.otp_max_requests_per_hour_ip,
+            window_ms=60 * 60 * 1000,
+            now_ms=now_ms
+        )
+        if ip_retry is not None:
+            raise TooManyRequestsError(retry_after_ms=ip_retry)
 
-            ip_rate = self._rate_by_ip.get(ip) or _IpRate(count=0, reset_at_ms=now_ms + 60 * 60 * 1000)
-            if now_ms > ip_rate.reset_at_ms:
-                ip_rate.count = 0
-                ip_rate.reset_at_ms = now_ms + 60 * 60 * 1000
+        # Check phone rate limit (per hour)
+        phone_retry = self._limiter.consume(
+            key=f'otp:phone:{phone}',
+            limit=settings.otp_max_requests_per_hour_phone,
+            window_ms=60 * 60 * 1000,
+            now_ms=now_ms
+        )
+        if phone_retry is not None:
+            raise TooManyRequestsError(retry_after_ms=phone_retry)
 
-            cooldown_left = settings.otp_resend_cooldown_ms - (now_ms - phone_rate.last_sent_at_ms)
-            if cooldown_left > 0:
-                raise TooManyRequestsError(retry_after_ms=cooldown_left)
-
-            if (
-                phone_rate.count >= settings.otp_max_requests_per_hour_phone
-                or ip_rate.count >= settings.otp_max_requests_per_hour_ip
-            ):
-                raise TooManyRequestsError()
-
-            phone_rate.count += 1
-            phone_rate.last_sent_at_ms = now_ms
-            self._rate_by_phone[phone] = phone_rate
-
-            ip_rate.count += 1
-            self._rate_by_ip[ip] = ip_rate
+        # Check cooldown (between requests)
+        cooldown_retry = self._limiter.consume(
+            key=f'otp:cooldown:{phone}',
+            limit=1,
+            window_ms=settings.otp_resend_cooldown_ms,
+            now_ms=now_ms
+        )
+        if cooldown_retry is not None:
+            raise TooManyRequestsError(retry_after_ms=cooldown_retry)
 
 
 class AuthService:

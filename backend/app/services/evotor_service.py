@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ..core.settings import REPO_DIR
+from ..utils.cache import SimpleCache
 from ..utils.envfile import upsert_env_var
 from .evotor_auth import EvotorWebhookAuth
 from .evotor_client import EvotorClient, EvotorCloudToken
@@ -95,11 +96,13 @@ class EvotorService:
         token_store: EvotorTokenStore,
         client: EvotorClient,
         env_local_path: Path | None = None,
+        cache_ttl_ms: int = 5 * 60 * 1000,  # 5 minutes default
     ) -> None:
         self._auth = auth
         self._token_store = token_store
         self._client = client
         self._env_local_path = env_local_path or _get_env_local_path()
+        self._cache = SimpleCache(ttl_ms=cache_ttl_ms)
 
     @classmethod
     def create_default(cls) -> 'EvotorService':
@@ -198,6 +201,9 @@ class EvotorService:
         if store_uuid or store_id:
             self._token_store.upsert_user_token(user_id=user_id, token=token, store_id=store_id, store_uuid=store_uuid)
 
+        # Invalidate cache when new token is received
+        self._cache.clear()
+
         return {
             'ok': True,
             'userId': user_id or None,
@@ -258,14 +264,19 @@ class EvotorService:
         if not token:
             raise ValueError('EVOTOR_CLOUD_TOKEN is not configured')
 
-        stores = self._client.fetch_v1_stores(token)
-        normalized: list[dict[str, str]] = []
-        for store in stores:
-            uuid = str(store.get('uuid') or '').strip()
-            name = str(store.get('name') or '').strip()
-            if uuid:
-                normalized.append({'uuid': uuid, 'name': name})
-        return normalized
+        cache_key = 'stores:v1:all'
+
+        def fetch_stores() -> list[dict[str, str]]:
+            stores = self._client.fetch_v1_stores(token)
+            normalized: list[dict[str, str]] = []
+            for store in stores:
+                uuid = str(store.get('uuid') or '').strip()
+                name = str(store.get('name') or '').strip()
+                if uuid:
+                    normalized.append({'uuid': uuid, 'name': name})
+            return normalized
+
+        return self._cache.cached(cache_key, fetch_stores)
 
     def set_store_uuid(self, store_uuid: str) -> str:
         normalized = str(store_uuid or '').strip()
@@ -280,7 +291,14 @@ class EvotorService:
         resolved = self.resolve_cloud_token(query_user_id)
         if not resolved.token:
             raise ValueError('Evotor cloud token is not configured')
-        return self._client.fetch_cloud_stores(resolved.token), resolved.source
+
+        cache_key = f'stores:cloud:{resolved.source}'
+
+        def fetch_stores() -> list[dict[str, Any]]:
+            return self._client.fetch_cloud_stores(resolved.token)
+
+        stores = self._cache.cached(cache_key, fetch_stores)
+        return stores, resolved.source
 
     def cloud_products(
         self,
@@ -304,7 +322,12 @@ class EvotorService:
         if not token or not store_uuid:
             return []
 
-        raw_items = self._client.fetch_v1_products(token, store_uuid)
-        items = [item for item in raw_items if float(item.get('price') or 0) > 0]
-        return [_map_evotor_to_menu_item(item) for item in items]
+        cache_key = f'products:v1:{store_uuid}'
+
+        def fetch_products() -> list[dict[str, Any]]:
+            raw_items = self._client.fetch_v1_products(token, store_uuid)
+            items = [item for item in raw_items if float(item.get('price') or 0) > 0]
+            return [_map_evotor_to_menu_item(item) for item in items]
+
+        return self._cache.cached(cache_key, fetch_products)
 
