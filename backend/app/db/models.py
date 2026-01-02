@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -23,6 +23,9 @@ class User(Base):
 
 class Session(Base):
     __tablename__ = 'sessions'
+    __table_args__ = (
+        Index('ix_sessions_user_expires', 'user_id', 'expires_at'),
+    )
 
     token: Mapped[str] = mapped_column(String, primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True, nullable=False)
@@ -38,10 +41,14 @@ class OtpCode(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime, index=True, nullable=False)
     attempts_left: Mapped[int] = mapped_column(Integer, nullable=False)
+    blocked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
 
 
 class Order(Base):
     __tablename__ = 'orders'
+    __table_args__ = (
+        Index('ix_orders_user_date', 'user_id', 'date'),
+    )
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True, nullable=False)

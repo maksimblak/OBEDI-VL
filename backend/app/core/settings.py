@@ -119,7 +119,7 @@ class Settings:
     trust_proxy_headers: bool = _bool_env('TRUST_PROXY_HEADERS', False)
     trusted_proxy_ips: str = os.getenv('TRUSTED_PROXY_IPS', '').strip()
 
-    csrf_origin_check: bool = _bool_env('CSRF_ORIGIN_CHECK', False)
+    csrf_origin_check: bool = _bool_env('CSRF_ORIGIN_CHECK', True)
 
     cors_origins: list[str] = field(default_factory=_cors_origins)
     allowed_hosts: list[str] = field(default_factory=_allowed_hosts)

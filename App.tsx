@@ -75,13 +75,21 @@ export default function App() {
   const shareParamHandledRef = useRef(false);
 
   const parseShareParam = (value: string): { id: string; quantity: number }[] => {
+    // Validate ID format to prevent XSS: only alphanumeric, dash, underscore
+    const validIdPattern = /^[a-zA-Z0-9_-]+$/;
+
     return value
       .split(',')
       .map((pair) => {
         const [idRaw, qtyRaw] = pair.split(':');
         const id = (idRaw || '').trim();
         const quantity = Math.max(1, Math.min(99, Math.floor(Number(qtyRaw))));
-        if (!id || !Number.isFinite(quantity)) return null;
+
+        // Validate ID format and quantity
+        if (!id || !validIdPattern.test(id) || !Number.isFinite(quantity)) {
+          return null;
+        }
+
         return { id, quantity };
       })
       .filter((v): v is { id: string; quantity: number } => v !== null);

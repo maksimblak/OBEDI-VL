@@ -95,6 +95,12 @@ class AuthService:
         if not phone:
             raise InvalidPhoneError()
 
+        # Check if phone is blocked
+        existing = self._otp_codes.get(phone)
+        now = utc_now()
+        if existing and existing.blocked_until and now < existing.blocked_until:
+            raise TooManyAttemptsError()
+
         now_ms = int(time.time() * 1000)
         self._rate_limiter.consume(phone=phone, ip=client_ip, now_ms=now_ms)
 
@@ -110,6 +116,7 @@ class AuthService:
             created_at=created_at,
             expires_at=expires_at,
             attempts_left=settings.otp_max_attempts,
+            blocked_until=None,  # Clear any previous block when new OTP is requested
         )
         self._db.commit()
 
@@ -141,7 +148,15 @@ class AuthService:
         incoming_hash = sha256_hex(f'{phone}:{code}')
         ok = timing_safe_equal_hex(incoming_hash, record.code_hash)
         if not ok:
-            record.attempts_left -= 1
+            # Atomic decrement to prevent race conditions
+            decremented = self._otp_codes.decrement_attempts(phone)
+            if not decremented:
+                # Attempts exhausted - block phone for 1 hour
+                blocked_until = now + timedelta(hours=1)
+                self._otp_codes.block_phone(phone, blocked_until)
+                self._db.commit()
+                raise TooManyAttemptsError()
+
             self._db.commit()
             raise InvalidCodeError()
 
