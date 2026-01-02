@@ -13,14 +13,12 @@ from pathlib import Path
 from .core.logging import setup_logging
 from .core.settings import REPO_DIR, settings
 from .services.ai_service import AiService
-from .services.auth_service import OtpRateLimiter
 from .services.delivery_service import DeliveryService
 from .services.evotor_auth import EvotorWebhookAuth
 from .services.evotor_client import EvotorClient
 from .services.evotor_service import EvotorService
 from .services.evotor_token_store import EvotorTokenStore
 from .services.maintenance_service import MaintenanceService
-from .services.rate_limiter import FixedWindowRateLimiter
 from .services.sms import create_sms_sender
 from .core.database import SessionLocal
 
@@ -152,8 +150,6 @@ def create_app() -> FastAPI:
         maintenance.stop()
 
     app.state.sms_sender = create_sms_sender(settings)
-    app.state.otp_rate_limiter = OtpRateLimiter()
-    app.state.rate_limiter = FixedWindowRateLimiter()
     app.state.ai_service = AiService()
     app.state.delivery_service = DeliveryService(
         cache_ttl_ms=settings.delivery_zone_cache_ttl_ms,

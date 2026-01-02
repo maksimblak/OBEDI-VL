@@ -21,8 +21,8 @@ def get_sms_sender(request: Request) -> SmsSender:
     return request.app.state.sms_sender
 
 
-def get_otp_rate_limiter(request: Request) -> OtpRateLimiter:
-    return request.app.state.otp_rate_limiter
+def get_otp_rate_limiter(db: Session = Depends(get_db)) -> OtpRateLimiter:
+    return OtpRateLimiter(db=db)
 
 
 def get_delivery_service(request: Request) -> DeliveryService:
@@ -41,8 +41,8 @@ def get_evotor_service(request: Request) -> EvotorService:
     return request.app.state.evotor_service
 
 
-def get_rate_limiter(request: Request) -> FixedWindowRateLimiter:
-    return request.app.state.rate_limiter
+def get_rate_limiter(db: Session = Depends(get_db)) -> FixedWindowRateLimiter:
+    return FixedWindowRateLimiter(db=db)
 
 
 def get_auth_service(
